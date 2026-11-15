@@ -260,7 +260,8 @@ struct FensterZiehFlaeche: NSViewRepresentable {
 struct AppLogo: View {
     var groesse: CGFloat = 16
     var body: some View {
-        Image(nsImage: NSApp.applicationIconImage)
+        // Logo ohne Kachel (aus dem App-Paket), sonst das App-Symbol
+        Image(nsImage: NSImage(named: "Logo") ?? NSApp.applicationIconImage)
             .resizable()
             .frame(width: groesse, height: groesse)
     }

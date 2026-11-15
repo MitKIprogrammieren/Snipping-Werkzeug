@@ -14,7 +14,7 @@ struct WindowsTitelZeile: View {
             FensterZiehFlaeche()
             HStack(spacing: 0) {
                 HStack(spacing: 10) {
-                    AppLogo(groesse: 16)
+                    AppLogo(groesse: 22)
                     Text("Snipping Werkzeug").font(.system(size: 12))
                 }
                 .padding(.leading, 14)
@@ -262,7 +262,7 @@ struct HinweisAnsicht: View {
         let stil = Stil(darstellung: darstellung)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                AppLogo(groesse: 16)
+                AppLogo(groesse: 20)
                 Text("Snipping Werkzeug").font(.system(size: 12)).foregroundStyle(.secondary)
                 Spacer()
                 Button(action: schliessen) {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.8 – 15.11.2026
+
+- Größeres App-Symbol: richtige macOS-Kachel, damit macOS es nicht verkleinert in eine graue Kachel setzt
+- Logo in der Titelzeile größer (22 px Windows, 24 px Mac) und ohne Kachel
+
 ## 0.0.7 – 15.11.2026
 
 - Neu: Automatisch schwärzen (Auge-durchgestrichen-Knopf) – die Texterkennung sucht IP- und MAC-Adressen, E-Mail-Adressen, Telefonnummern, IBANs, Passwörter (hinter „Passwort:“, „PIN:“ …), Schlüssel/Tokens und Links

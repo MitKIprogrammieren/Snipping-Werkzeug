@@ -282,7 +282,7 @@ struct HauptAnsicht: View {
                     FensterZiehFlaeche()
                     HStack(spacing: 6) {
                         Spacer().frame(width: 74)
-                        AppLogo(groesse: 18).allowsHitTesting(false)
+                        AppLogo(groesse: 24).allowsHitTesting(false)
                         Text("Snipping Werkzeug")
                             .font(.system(size: 13, weight: .semibold))
                             .allowsHitTesting(false)

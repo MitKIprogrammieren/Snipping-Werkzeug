@@ -186,7 +186,7 @@ final class EditorModell: ObservableObject {
         case .radierer:
             geste = .radieren
         case .form:
-            aktuell = .form(Form(art: formArt, start: start, ende: start, farbe: formFarbe,
+            aktuell = .form(FormElement(art: formArt, start: start, ende: start, farbe: formFarbe,
                                  breite: formBreite, fuellung: fuellung))
             geste = .form
         case .verpixeln:

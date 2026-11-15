@@ -80,7 +80,7 @@ struct Strich {
     }
 }
 
-struct Form {
+struct FormElement {
     let id = UUID()
     var art: FormArt
     var start: CGPoint
@@ -128,7 +128,7 @@ struct Nummer {
 
 enum Element {
     case strich(Strich)
-    case form(Form)
+    case form(FormElement)
     case text(TextElement)
     case nummer(Nummer)
 
@@ -220,7 +220,7 @@ enum Zeichner {
         cg.strokePath()
     }
 
-    private static func zeichne(_ f: Form, in cg: CGContext) {
+    private static func zeichne(_ f: FormElement, in cg: CGContext) {
         let farbe = f.farbe.nsColor
         cg.setStrokeColor(farbe.cgColor)
         cg.setFillColor(farbe.cgColor)

@@ -81,6 +81,7 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
     let zustand = HauptZustand()
     private(set) var fenster: NSWindow?
     private var beobachter: NSObjectProtocol?
+    private var mausrad: Any?
     private var letzteDarstellung: Darstellung?
 
     func zeigen() {
@@ -89,11 +90,18 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
         NSApp.activate()
     }
 
-    func zeigeBild(_ bild: CGImage, meldung: String) {
+    func zeigeBild(_ bild: CGImage, meldung: String, anzeigen: Bool = true) {
         zustand.inhalt = .bild(EditorModell(bild: bild))
         zustand.meldung = meldung
+        if anzeigen { zeigeAktuellesBild() }
+    }
+
+    /// Öffnet das Fenster mit dem zuletzt aufgenommenen Ausschnitt (z. B. nach Klick auf den Hinweis).
+    func zeigeAktuellesBild() {
         let w = fenster ?? erstelle()
-        passeGroesseAn(w, an: CGSize(width: bild.width, height: bild.height))
+        if let m = zustand.editor {
+            passeGroesseAn(w, an: m.groesse)
+        }
         zeigen()
     }
 
@@ -119,6 +127,17 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
         w.center()
         w.setFrameAutosaveName("Hauptfenster")
 
+        // Mausrad dreht das Lineal
+        mausrad = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] e in
+            MainActor.assumeIsolated { () -> NSEvent? in
+                guard let self, e.window === self.fenster,
+                      let m = self.zustand.editor, m.lineal != nil else { return e }
+                let delta = e.hasPreciseScrollingDeltas ? e.scrollingDeltaY / 3 : e.scrollingDeltaY * 3
+                m.dreheLineal(um: delta)
+                return nil
+            }
+        }
+
         // Stil sofort umstellen, wenn er in den Einstellungen geändert wird
         beobachter = NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
                                                             object: nil, queue: .main) { [weak self] _ in
@@ -142,7 +161,11 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
         } else {
             w.toolbar = nil
             w.toolbarStyle = .automatic
-            w.minSize = NSSize(width: 860, height: 460)
+            w.minSize = NSSize(width: 960, height: 460)
+        }
+        // Windows: Mac-Ampel ausblenden, eigene Knöpfe rechts
+        for art in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            w.standardWindowButton(art)?.isHidden = (d == .windows)
         }
         if w.frame.width < w.minSize.width {
             var f = w.frame
@@ -153,7 +176,7 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
 
     private func passeGroesseAn(_ w: NSWindow, an pixel: CGSize) {
         let faktor = w.backingScaleFactor
-        let chrome: CGFloat = Stil.aktuell.istWindows ? (30 + 48 + 1 + 24) : (52 + 1 + 24)
+        let chrome: CGFloat = Stil.aktuell.istWindows ? (32 + 48 + 1 + 24) : (52 + 1 + 24)
         let bereich = (w.screen ?? NSScreen.main)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         var groesse = NSSize(width: pixel.width / faktor + 96, height: pixel.height / faktor + chrome + 96)
         groesse.width = min(max(groesse.width, w.minSize.width), bereich.width * 0.9)
@@ -180,31 +203,9 @@ struct HauptAnsicht: View {
         let stil = Stil(darstellung: darstellung)
         VStack(spacing: 0) {
             if stil.istWindows {
-                // Titelzeile wie in der Claude-App: Logo und Titel neben den Fensterknöpfen
-                ZStack {
-                    FensterZiehFlaeche()
-                    HStack(spacing: 8) {
-                        Spacer().frame(width: 72)
-                        AppLogo()
-                        Text("Snipping Werkzeug").font(.system(size: 12))
-                        Spacer()
-                    }
-                    .allowsHitTesting(false)
-                }
-                .frame(height: 30)
-                .background(stil.leiste)
-
-                HStack(spacing: 6) {
-                    AufnahmeKnoepfe()
-                    Spacer(minLength: 12)
-                    if let m = zustand.editor { BearbeitungsWerkzeuge(m: m) }
-                    Spacer(minLength: 12)
-                    AusgabeKnoepfe(zustand: zustand)
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 48)
-                .background(stil.leiste)
-
+                // Wie Windows 11: Titel links, Minimieren/Maximieren/Schließen rechts
+                WindowsTitelZeile()
+                WindowsLeiste(zustand: zustand)
                 Rectangle().fill(stil.linie).frame(height: 1)
             } else {
                 ZStack {
@@ -333,6 +334,12 @@ struct LeerAnsicht: View {
     @ObservedObject private var k = KuerzelSpeicher.shared
 
     private var hinweis: String {
+        if darstellung == .windows {
+            if let t = k.text(.ausschnittGlobal) {
+                return "Drücken Sie \(t), um einen Ausschnitt zu starten."
+            }
+            return "Klicken Sie auf „Neu“, um einen Ausschnitt zu starten."
+        }
         if let t = k.text(.ausschnittGlobal) {
             return "Drücke \(t) oder klicke auf „Neu“, um einen Ausschnitt oder eine Bildschirmaufnahme zu erstellen."
         }
@@ -342,18 +349,21 @@ struct LeerAnsicht: View {
     var body: some View {
         let stil = Stil(darstellung: darstellung)
         VStack(spacing: 14) {
-            Image(systemName: "scissors")
-                .font(.system(size: 46, weight: .light))
-                .foregroundStyle(stil.akzent)
-            Text("Noch kein Ausschnitt")
-                .font(.title3.weight(.semibold))
+            if !stil.istWindows {
+                Image(systemName: "scissors")
+                    .font(.system(size: 46, weight: .light))
+                    .foregroundStyle(stil.akzent)
+                Text("Noch kein Ausschnitt")
+                    .font(.title3.weight(.semibold))
+            }
             Text(hinweis)
+                .font(.system(size: stil.istWindows ? 14 : 13))
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: 380)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(stil.flaeche)
+        .background(stil.istWindows ? stil.leiste : stil.flaeche)
     }
 }
 

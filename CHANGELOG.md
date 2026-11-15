@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.3 – 15.11.2026
+
+Windows-Darstellung so nah wie möglich am Snipping Tool von Windows 11 (die Mac-Darstellung bleibt wählbar):
+
+- Titelzeile mit Symbol und Namen links, Minimieren/Maximieren/Schließen rechts (Schließen wird beim Überfahren rot), keine Mac-Ampel
+- Befehlsleiste wie im Original: blauer „+ Neu“-Knopf, Umschalter Ausschnitt/Aufnahme, Klappmenüs für Modus und „Keine Verzögerung“, Werkzeuge in der Mitte, Rückgängig/Speichern/Kopieren/Teilen rechts, „…“-Menü mit Einstellungen
+- Windows-11-Farben: Mica-Grau, Akzentblau #005FB8 (dunkel #60CDFF), 4-px-Ecken, 32 px hohe Knöpfe mit Hover-Hintergrund
+- Aufnahmeleiste: Umschalter Ausschnitt/Aufnahme links, dann die Modi, Verzögerung, Schließen
+- Hinweis unten rechts mit Vorschaubild nach einem Ausschnitt per Tastenkürzel – Klick öffnet den Editor (über „Neu“ geht der Editor direkt auf)
+- Neu: Lineal – verschieben mit der Maus, drehen mit dem Mausrad (rastet bei 0°/45°/90° ein), Stift und Textmarker ziehen an der Kante gerade Linien
+- Farb- und Stärkeauswahl als Klappmenü unter Stift und Textmarker
+- Leerer Zustand mit dem Windows-Hinweis „Drücken Sie ⌃⇧S, um einen Ausschnitt zu starten.“
+
 ## 0.0.2 – 15.11.2026
 
 - Alle Tastenkürzel sind in den Einstellungen änderbar: ins Feld klicken, neue Kombination drücken

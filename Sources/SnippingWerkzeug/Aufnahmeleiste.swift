@@ -62,27 +62,27 @@ struct AufnahmeleisteAnsicht: View {
         }
     }
 
-    /// Wie Win+Umschalt+S: ein Klick auf den Modus startet sofort.
+    /// Wie Win+Umschalt+S: links Ausschnitt/Aufnahme, dann die Modi, ein Klick startet sofort.
     private var windowsLeiste: some View {
-        HStack(spacing: 4) {
+        let stil = Stil(darstellung: darstellung)
+        return HStack(spacing: 2) {
+            WinArtUmschalter().padding(.trailing, 6)
             ForEach(Modus.allCases) { mo in
-                LeistenKnopf(symbol: mo.symbol, hilfe: mo.langName, aktiv: mo == modus) {
-                    modus = mo
-                    starten(mo)
+                if art == .foto || mo != .freiform {
+                    LeistenKnopf(symbol: mo.symbol, hilfe: mo.langName, aktiv: mo == modus) {
+                        modus = mo
+                        starten(mo)
+                    }
                 }
             }
-            Trenner()
-            ForEach(Art.allCases) { a in
-                LeistenKnopf(symbol: a.symbol, hilfe: a.name, aktiv: a == art) { art = a }
-            }
-            Trenner()
-            VerzoegerungsMenue(verzoegerung: $verzoegerung)
-            Trenner()
+            Rectangle().fill(stil.linie).frame(width: 1, height: 20).padding(.horizontal, 4)
+            WinVerzoegerungsMenue(mitText: false)
+            Rectangle().fill(stil.linie).frame(width: 1, height: 20).padding(.horizontal, 4)
             LeistenKnopf(symbol: "xmark", hilfe: "Schließen (esc)") { schliessen() }
         }
-        .padding(6)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .windowBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.15), lineWidth: 0.5))
+        .padding(4)
+        .background(RoundedRectangle(cornerRadius: 8).fill(stil.karte))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(stil.linie, lineWidth: 1))
     }
 
     /// Wie ⇧⌘5 auf dem Mac: Modus wählen, dann „Aufnehmen“.

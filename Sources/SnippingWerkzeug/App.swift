@@ -58,6 +58,8 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.marker))
             Button("Radierer") { editor?.waehle(.radierer) }
                 .keyboardShortcut(k.shortcut(.radierer))
+            Button("Lineal") { editor?.schalteLineal() }
+                .keyboardShortcut(k.shortcut(.lineal))
             Button("Zuschneiden") { editor?.waehle(.zuschneiden) }
                 .keyboardShortcut(k.shortcut(.zuschneiden))
             Divider()
@@ -125,9 +127,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         eintrag("Snipping Werkzeug beenden", #selector(beenden))
     }
 
-    @objc private func neuerAusschnitt() { AufnahmeSteuerung.shared.zeigeLeiste() }
-    @objc private func videoStarten() { AufnahmeSteuerung.shared.zeigeLeiste(art: .video) }
-    @objc private func vollbild() { AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto) }
+    @objc private func neuerAusschnitt() {
+        AufnahmeSteuerung.shared.ausApp = false
+        AufnahmeSteuerung.shared.zeigeLeiste()
+    }
+    @objc private func videoStarten() {
+        AufnahmeSteuerung.shared.ausApp = false
+        AufnahmeSteuerung.shared.zeigeLeiste(art: .video)
+    }
+    @objc private func vollbild() {
+        AufnahmeSteuerung.shared.ausApp = false
+        AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto)
+    }
     @objc private func aufnahmeBeenden() { AufnahmeSteuerung.shared.stoppeVideo(verwerfen: false) }
     @objc private func fensterZeigen() { Hauptfenster.shared.zeigen() }
     @objc private func einstellungenZeigen() { EinstellungenFenster.shared.zeigen() }

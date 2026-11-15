@@ -74,7 +74,7 @@ struct EinstellungenAnsicht: View {
                 }
                 .pickerStyle(.segmented)
                 Text(darstellung == .windows
-                     ? "Wie das Snipping Tool von Windows 11: Aufnahmeleiste oben, „Neu“ startet sofort."
+                     ? "Wie das Snipping Tool von Windows 11: Fensterknöpfe rechts, Aufnahmeleiste oben, Hinweis unten rechts, Lineal."
                      : "Wie die Bildschirmfoto-App von macOS (⇧⌘5): Aufnahmeleiste unten mit „Aufnehmen“-Knopf.")
                     .font(.caption)
                     .foregroundStyle(.secondary)

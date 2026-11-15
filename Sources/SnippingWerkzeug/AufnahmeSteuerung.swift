@@ -17,6 +17,8 @@ final class AufnahmeSteuerung {
     private var steuerPanel: SchwebePanel?
     private var rahmenFenster: NSWindow?
     private var hauptWarSichtbar = false
+    /// true, wenn über „Neu“ in der App gestartet (dann öffnet sich der Editor direkt, sonst kommt der Hinweis)
+    var ausApp = false
     private var laeuft = false
     private var artFuerDiesenLauf: Art?
 
@@ -26,6 +28,7 @@ final class AufnahmeSteuerung {
 
     /// „Neu“ aus Menü oder Werkzeugleiste: Windows startet sofort, Mac zeigt die Leiste.
     func neu() {
+        ausApp = true
         if Stil.aktuell.istWindows {
             starte(modus: Einstellungen.modus)
         } else {
@@ -372,7 +375,49 @@ final class AufnahmeSteuerung {
                 teile.append("Automatisches Speichern fehlgeschlagen")
             }
         }
-        Hauptfenster.shared.zeigeBild(bild, meldung: teile.joined(separator: " · "))
+        let meldung = teile.joined(separator: " · ")
+        if ausApp {
+            // Aus der App gestartet → wie bei Windows direkt im Editor öffnen
+            Hauptfenster.shared.zeigeBild(bild, meldung: meldung)
+        } else {
+            // Per Tastenkürzel gestartet → Hinweis unten rechts, Klick öffnet den Editor
+            Hauptfenster.shared.zeigeBild(bild, meldung: meldung, anzeigen: false)
+            zeigeHinweis(bild, kopiert: Einstellungen.autoKopieren)
+        }
+    }
+
+    private var hinweis: SchwebePanel?
+    private var hinweisNummer = 0
+
+    private func zeigeHinweis(_ bild: CGImage, kopiert: Bool) {
+        hinweis?.orderOut(nil)
+        hinweisNummer += 1
+        let nummer = hinweisNummer
+        let panel = SchwebePanel.erstelle()
+        panel.isMovableByWindowBackground = false
+        panel.setzeInhalt(HinweisAnsicht(
+            vorschau: NSImage(cgImage: bild, size: .zero),
+            titel: kopiert ? "Ausschnitt in Zwischenablage kopiert" : "Ausschnitt erstellt",
+            text: "Zum Markieren und Teilen hier klicken",
+            oeffnen: { [weak self] in
+                self?.schliesseHinweis()
+                Hauptfenster.shared.zeigeAktuellesBild()
+            },
+            schliessen: { [weak self] in self?.schliesseHinweis() }
+        ))
+        let vf = Bildschirm.screenUnterMaus().visibleFrame
+        panel.setFrameOrigin(NSPoint(x: vf.maxX - panel.frame.width - 16, y: vf.minY + 16))
+        panel.orderFrontRegardless()
+        hinweis = panel
+        Task {
+            try? await Task.sleep(for: .seconds(7))
+            if hinweisNummer == nummer { schliesseHinweis() }
+        }
+    }
+
+    private func schliesseHinweis() {
+        hinweis?.orderOut(nil)
+        hinweis = nil
     }
 
     private func fertigVideo(_ quelle: URL) {

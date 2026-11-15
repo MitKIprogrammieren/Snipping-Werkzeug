@@ -5,6 +5,37 @@ enum Werkzeug {
     case keins, stift, marker, radierer, zuschneiden
 }
 
+/// Lineal wie im Windows-Snipping-Tool: verschieben, mit dem Mausrad drehen, Stift zieht gerade Linien daran.
+struct Lineal {
+    var mitte: CGPoint
+    var winkel: CGFloat = 0          // Bogenmaß
+    var laenge: CGFloat
+    var breite: CGFloat
+
+    var richtung: CGPoint { CGPoint(x: cos(winkel), y: sin(winkel)) }
+    var normale: CGPoint { CGPoint(x: -sin(winkel), y: cos(winkel)) }
+
+    /// t = entlang des Lineals, n = quer dazu
+    func lokal(_ p: CGPoint) -> (t: CGFloat, n: CGFloat) {
+        let dx = p.x - mitte.x, dy = p.y - mitte.y
+        return (dx * richtung.x + dy * richtung.y, dx * normale.x + dy * normale.y)
+    }
+
+    func punkt(t: CGFloat, n: CGFloat) -> CGPoint {
+        CGPoint(x: mitte.x + richtung.x * t + normale.x * n,
+                y: mitte.y + richtung.y * t + normale.y * n)
+    }
+
+    var grad: Int {
+        let g = Int((winkel * 180 / .pi).rounded()) % 360
+        return g < 0 ? g + 360 : g
+    }
+}
+
+private enum Geste {
+    case nichts, zeichnen, lineal(versatz: CGPoint), radieren, zuschneiden
+}
+
 struct Strich: Identifiable {
     let id = UUID()
     var punkte: [CGPoint]          // Bildpixel, Ursprung oben links
@@ -44,6 +75,10 @@ final class EditorModell: ObservableObject {
     @Published var zeigeText = false
     @Published var erkannterText = ""
     @Published var erkenntGerade = false
+    @Published var lineal: Lineal?
+
+    private var geste: Geste?
+    private var kante: CGFloat?      // Abstand der Linealkante, an der gerade gezeichnet wird
 
     private var undoStapel: [Schnappschuss] = []
     private var redoStapel: [Schnappschuss] = []
@@ -71,14 +106,108 @@ final class EditorModell: ObservableObject {
 
     func beginneStrich(_ p: CGPoint) {
         let istMarker = werkzeug == .marker
-        aktuell = Strich(punkte: [p],
+        let breite = istMarker ? markerBreite : stiftBreite
+        kante = nil
+        if let l = lineal {
+            let lo = l.lokal(p)
+            if abs(lo.t) <= l.laenge / 2 + 20 && abs(lo.n) <= l.breite / 2 + 28 {
+                let seite: CGFloat = lo.n < 0 ? -1 : 1
+                kante = seite * (l.breite / 2 + breite / 2)
+            }
+        }
+        aktuell = Strich(punkte: [anLineal(p)],
                          farbe: istMarker ? markerFarbe : stiftFarbe,
-                         breite: istMarker ? markerBreite : stiftBreite,
+                         breite: breite,
                          marker: istMarker)
     }
 
     func erweitereStrich(_ p: CGPoint) {
-        aktuell?.punkte.append(p)
+        guard var s = aktuell else { return }
+        if kante != nil, let erster = s.punkte.first {
+            s.punkte = [erster, anLineal(p)]       // gerade Linie entlang der Kante
+        } else {
+            s.punkte.append(p)
+        }
+        aktuell = s
+    }
+
+    private func anLineal(_ p: CGPoint) -> CGPoint {
+        guard let k = kante, let l = lineal else { return p }
+        return l.punkt(t: l.lokal(p).t, n: k)
+    }
+
+    // MARK: Lineal
+
+    func schalteLineal() {
+        if lineal != nil {
+            lineal = nil
+            return
+        }
+        let w = groesse.width, h = groesse.height
+        lineal = Lineal(mitte: CGPoint(x: w / 2, y: h / 2),
+                        laenge: max(w, h) * 1.2,
+                        breite: min(max(min(w, h) * 0.14, 70), 160))
+    }
+
+    func dreheLineal(um grad: CGFloat) {
+        guard var l = lineal else { return }
+        var g = l.winkel * 180 / .pi + grad
+        // an 0°, 45°, 90° … leicht einrasten
+        let naechste = (g / 45).rounded() * 45
+        if abs(g - naechste) < 0.8 { g = naechste }
+        l.winkel = g * .pi / 180
+        lineal = l
+    }
+
+    // MARK: Maus auf der Zeichenfläche (Bildpixel)
+
+    func zeigerBewegt(start: CGPoint, aktuell p: CGPoint, radiererRadius: CGFloat) {
+        if geste == nil { geste = waehleGeste(start) }
+        switch geste {
+        case .zeichnen:
+            if aktuell == nil { beginneStrich(start) }
+            erweitereStrich(p)
+        case .lineal(let v):
+            lineal?.mitte = CGPoint(x: p.x + v.x, y: p.y + v.y)
+        case .radieren:
+            radiere(p, radius: radiererRadius)
+        case .zuschneiden:
+            setzeZuschnitt(CGRect(x: min(start.x, p.x), y: min(start.y, p.y),
+                                  width: abs(p.x - start.x), height: abs(p.y - start.y)))
+        case .nichts, .none:
+            break
+        }
+    }
+
+    func zeigerLos() {
+        switch geste {
+        case .zeichnen:
+            beendeStrich()
+        case .radieren:
+            radiererEnde()
+        case .zuschneiden:
+            if let z = zuschnitt, z.width >= 4, z.height >= 4 { break }
+            setzeZuschnitt(CGRect(origin: .zero, size: groesse))
+        default:
+            break
+        }
+        geste = nil
+        kante = nil
+    }
+
+    private func waehleGeste(_ start: CGPoint) -> Geste {
+        if werkzeug == .zuschneiden { return .zuschneiden }
+        if let l = lineal {
+            let lo = l.lokal(start)
+            if abs(lo.t) <= l.laenge / 2 && abs(lo.n) < l.breite / 2 - 8 {
+                return .lineal(versatz: CGPoint(x: l.mitte.x - start.x, y: l.mitte.y - start.y))
+            }
+        }
+        switch werkzeug {
+        case .stift, .marker: return .zeichnen
+        case .radierer: return .radieren
+        default: return .nichts
+        }
     }
 
     func beendeStrich() {
@@ -233,6 +362,7 @@ struct EditorFlaeche: View {
                 ctx.scaleBy(x: s, y: s)
                 for strich in m.striche { zeichne(strich, in: ctx) }
                 if let a = m.aktuell { zeichne(a, in: ctx) }
+                if let l = m.lineal { zeichneLineal(l, s: s, in: ctx) }
             }
 
             if m.werkzeug == .zuschneiden, let z = m.zuschnitt {
@@ -266,34 +396,43 @@ struct EditorFlaeche: View {
         .gesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { v in
-                    let p = CGPoint(x: v.location.x / s, y: v.location.y / s)
-                    switch m.werkzeug {
-                    case .stift, .marker:
-                        if m.aktuell == nil { m.beginneStrich(p) } else { m.erweitereStrich(p) }
-                    case .radierer:
-                        m.radiere(p, radius: 10 / s)
-                    case .zuschneiden:
-                        let a = CGPoint(x: v.startLocation.x / s, y: v.startLocation.y / s)
-                        m.setzeZuschnitt(CGRect(x: min(a.x, p.x), y: min(a.y, p.y),
-                                                width: abs(p.x - a.x), height: abs(p.y - a.y)))
-                    case .keins:
-                        break
-                    }
+                    m.zeigerBewegt(start: CGPoint(x: v.startLocation.x / s, y: v.startLocation.y / s),
+                                   aktuell: CGPoint(x: v.location.x / s, y: v.location.y / s),
+                                   radiererRadius: 10 / s)
                 }
-                .onEnded { _ in
-                    switch m.werkzeug {
-                    case .stift, .marker:
-                        m.beendeStrich()
-                    case .radierer:
-                        m.radiererEnde()
-                    case .zuschneiden:
-                        if let z = m.zuschnitt, z.width >= 4, z.height >= 4 { break }
-                        m.setzeZuschnitt(CGRect(origin: .zero, size: m.groesse))
-                    case .keins:
-                        break
-                    }
-                }
+                .onEnded { _ in m.zeigerLos() }
         )
+    }
+
+    private func zeichneLineal(_ l: Lineal, s: CGFloat, in ctx: GraphicsContext) {
+        var c = ctx
+        c.translateBy(x: l.mitte.x, y: l.mitte.y)
+        c.rotate(by: .radians(Double(l.winkel)))
+        let r = CGRect(x: -l.laenge / 2, y: -l.breite / 2, width: l.laenge, height: l.breite)
+        let form = Path(roundedRect: r, cornerRadius: 6 / s)
+        c.fill(form, with: .color(Color(white: 0.97).opacity(0.88)))
+        c.stroke(form, with: .color(Color.black.opacity(0.35)), lineWidth: 1 / s)
+
+        // Teilstriche an beiden Kanten
+        var striche = Path()
+        let abstand = max(4, 5 / s)
+        var i = 0
+        var x = -l.laenge / 2 + abstand
+        while x < l.laenge / 2 {
+            let lang: CGFloat = (i + 1) % 10 == 0 ? l.breite * 0.28 : ((i + 1) % 5 == 0 ? l.breite * 0.2 : l.breite * 0.11)
+            striche.move(to: CGPoint(x: x, y: -l.breite / 2))
+            striche.addLine(to: CGPoint(x: x, y: -l.breite / 2 + lang))
+            striche.move(to: CGPoint(x: x, y: l.breite / 2))
+            striche.addLine(to: CGPoint(x: x, y: l.breite / 2 - lang))
+            x += abstand
+            i += 1
+        }
+        c.stroke(striche, with: .color(Color.black.opacity(0.55)), lineWidth: 1 / s)
+
+        c.draw(Text("\(l.grad)°")
+                .font(.system(size: 13 / s, weight: .semibold))
+                .foregroundColor(Color.black.opacity(0.75)),
+               at: .zero)
     }
 
     private func zeichne(_ s: Strich, in ctx: GraphicsContext) {
@@ -314,6 +453,7 @@ struct EditorFlaeche: View {
 
 struct BearbeitungsWerkzeuge: View {
     @ObservedObject var m: EditorModell
+    var mitRueckgaengig: Bool = true
     @ObservedObject private var k = KuerzelSpeicher.shared
 
     var body: some View {
@@ -332,17 +472,30 @@ struct BearbeitungsWerkzeuge: View {
                 LeistenKnopf(symbol: "highlighter", hilfe: k.hilfe("Textmarker", .marker), aktiv: m.werkzeug == .marker) { m.waehle(.marker) }
                 FarbMenue(farbe: $m.markerFarbe, breite: $m.markerBreite, breiten: [16, 28, 44])
                 LeistenKnopf(symbol: "eraser", hilfe: k.hilfe("Radierer", .radierer), aktiv: m.werkzeug == .radierer) { m.waehle(.radierer) }
+                LeistenKnopf(symbol: "ruler", hilfe: k.hilfe("Lineal (mit dem Mausrad drehen)", .lineal), aktiv: m.lineal != nil) { m.schalteLineal() }
                 LeistenKnopf(symbol: "crop", hilfe: k.hilfe("Zuschneiden", .zuschneiden)) { m.waehle(.zuschneiden) }
-                Trenner()
-                LeistenKnopf(symbol: "arrow.uturn.backward", hilfe: k.hilfe("Rückgängig", .rueckgaengig)) { m.rueckgaengig() }
-                    .opacity(m.kannRueckgaengig ? 1 : 0.35)
-                LeistenKnopf(symbol: "arrow.uturn.forward", hilfe: k.hilfe("Wiederholen", .wiederholen)) { m.wiederholen() }
-                    .opacity(m.kannWiederholen ? 1 : 0.35)
-                Trenner()
-                LeistenKnopf(symbol: "text.viewfinder", hilfe: k.hilfe("Text erkennen und kopieren", .texterkennung)) {
+                LeistenKnopf(symbol: "text.viewfinder", hilfe: k.hilfe("Textaktionen", .texterkennung)) {
                     Task { await m.erkenneText() }
                 }
+                if mitRueckgaengig {
+                    Trenner()
+                    RueckgaengigKnoepfe(m: m)
+                }
             }
+        }
+    }
+}
+
+struct RueckgaengigKnoepfe: View {
+    @ObservedObject var m: EditorModell
+    @ObservedObject private var k = KuerzelSpeicher.shared
+
+    var body: some View {
+        HStack(spacing: 2) {
+            LeistenKnopf(symbol: "arrow.uturn.backward", hilfe: k.hilfe("Rückgängig", .rueckgaengig)) { m.rueckgaengig() }
+                .opacity(m.kannRueckgaengig ? 1 : 0.35)
+            LeistenKnopf(symbol: "arrow.uturn.forward", hilfe: k.hilfe("Wiederholen", .wiederholen)) { m.wiederholen() }
+                .opacity(m.kannWiederholen ? 1 : 0.35)
         }
     }
 }
@@ -361,31 +514,28 @@ struct FarbMenue: View {
     }
 
     var body: some View {
-        Menu {
-            Section("Farbe") {
-                ForEach(Farbe.allCases) { f in
-                    Button {
-                        farbe = f
-                    } label: {
-                        Label {
-                            Text(f == farbe ? "\(f.name) ✓" : f.name)
-                        } icon: {
-                            Image(nsImage: f.punkt)
-                        }
-                    }
-                }
+        let farbBindung = $farbe
+        let breitenBindung = $breite
+        return HoverKnopf(kennung: "farbe-\(breiten.first ?? 0)", hilfe: "Farbe und Stärke") {
+            var eintraege: [Klappmenue.Eintrag] = [.ueberschrift("Farbe")]
+            for f in Farbe.allCases {
+                eintraege.append(.init(titel: f.name, bild: f.punkt, an: f == farbe) { farbBindung.wrappedValue = f })
             }
-            Section("Stärke") {
-                ForEach(breiten, id: \.self) { b in
-                    Button(b == breite ? "\(breitenName(b)) ✓" : breitenName(b)) { breite = b }
-                }
+            eintraege.append(.trenner)
+            eintraege.append(.ueberschrift("Stärke"))
+            for b in breiten {
+                eintraege.append(.init(titel: breitenName(b), an: b == breite) { breitenBindung.wrappedValue = b })
             }
-        } label: {
-            Image(nsImage: farbe.punkt)
+            Klappmenue.zeige(eintraege)
+        } inhalt: {
+            VStack(spacing: 2) {
+                Circle().fill(farbe.color)
+                    .overlay(Circle().strokeBorder(Color.primary.opacity(0.25), lineWidth: 0.5))
+                    .frame(width: 10, height: 10)
+                Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+            }
+            .frame(width: 16, height: 32)
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .help("Farbe und Stärke")
     }
 }
 

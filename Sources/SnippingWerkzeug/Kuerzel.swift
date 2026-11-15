@@ -106,7 +106,7 @@ struct Kuerzel: Codable, Equatable, Hashable {
 enum Aktion: String, CaseIterable, Identifiable {
     case ausschnittGlobal, videoGlobal, vollbildGlobal
     case neu, kopieren, speichern, rueckgaengig, wiederholen
-    case stift, marker, radierer, zuschneiden, texterkennung
+    case stift, marker, radierer, lineal, zuschneiden, texterkennung
 
     var id: String { rawValue }
 
@@ -123,8 +123,9 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .stift: return "Kugelschreiber"
         case .marker: return "Textmarker"
         case .radierer: return "Radierer"
+        case .lineal: return "Lineal"
         case .zuschneiden: return "Zuschneiden"
-        case .texterkennung: return "Text erkennen"
+        case .texterkennung: return "Textaktionen (Text erkennen)"
         }
     }
 
@@ -146,7 +147,7 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .speichern: return Kuerzel(tastenCode: kVK_ANSI_S, zeichen: "s", flags: [.command])
         case .rueckgaengig: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command])
         case .wiederholen: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command, .shift])
-        case .stift, .marker, .radierer, .zuschneiden, .texterkennung: return nil
+        case .stift, .marker, .radierer, .lineal, .zuschneiden, .texterkennung: return nil
         }
     }
 }
@@ -300,6 +301,7 @@ final class HotKeyVerwaltung {
 
     private func ausloesen(_ id: UInt32) {
         guard let a = aktionen[id] else { return }
+        AufnahmeSteuerung.shared.ausApp = false
         switch a {
         case .ausschnittGlobal: AufnahmeSteuerung.shared.zeigeLeiste()
         case .videoGlobal: AufnahmeSteuerung.shared.zeigeLeiste(art: .video)

@@ -135,6 +135,7 @@ enum Klappmenue {
         var titel: String
         var symbol: String? = nil
         var bild: NSImage? = nil
+        var schrift: NSFont? = nil
         var an: Bool = false
         var aktion: (() -> Void)? = nil
 
@@ -165,6 +166,9 @@ enum Klappmenue {
             item.target = ziel
             item.representedObject = ziel
             item.state = e.an ? .on : .off
+            if let schrift = e.schrift {
+                item.attributedTitle = NSAttributedString(string: e.titel, attributes: [.font: schrift])
+            }
             if let bild = e.bild {
                 item.image = bild
             } else if let symbol = e.symbol {

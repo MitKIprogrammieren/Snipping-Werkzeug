@@ -60,6 +60,129 @@ enum VerpixelnArt: String, CaseIterable, Identifiable {
     }
 }
 
+enum Schriftart: String, CaseIterable, Identifiable {
+    case system, gerundet, serif, mono, handschrift, filzstift, kreide, comic, plakativ
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .system: return "System"
+        case .gerundet: return "Gerundet"
+        case .serif: return "Serif"
+        case .mono: return "Schreibmaschine"
+        case .handschrift: return "Handschrift"
+        case .filzstift: return "Filzstift"
+        case .kreide: return "Kreide"
+        case .comic: return "Comic"
+        case .plakativ: return "Plakativ"
+        }
+    }
+
+    func schrift(_ groesse: CGFloat, fett: Bool = true) -> NSFont {
+        let gewicht: NSFont.Weight = fett ? .bold : .semibold
+        let basis = NSFont.systemFont(ofSize: groesse, weight: gewicht)
+        func design(_ d: NSFontDescriptor.SystemDesign) -> NSFont {
+            guard let desc = basis.fontDescriptor.withDesign(d) else { return basis }
+            return NSFont(descriptor: desc, size: groesse) ?? basis
+        }
+        switch self {
+        case .system: return basis
+        case .gerundet: return design(.rounded)
+        case .serif: return design(.serif)
+        case .mono: return NSFont.monospacedSystemFont(ofSize: groesse, weight: gewicht)
+        case .handschrift: return NSFont(name: "Noteworthy-Bold", size: groesse) ?? basis
+        case .filzstift: return NSFont(name: "MarkerFelt-Wide", size: groesse) ?? basis
+        case .kreide: return NSFont(name: "ChalkboardSE-Bold", size: groesse) ?? basis
+        case .comic: return NSFont(name: "ComicSansMS-Bold", size: groesse) ?? basis
+        case .plakativ: return NSFont(name: "Impact", size: groesse) ?? basis
+        }
+    }
+
+    /// Beliebige installierte Schriftfamilie
+    static func familie(_ name: String, _ groesse: CGFloat, fett: Bool) -> NSFont? {
+        NSFontManager.shared.font(withFamily: name, traits: fett ? .boldFontMask : [], weight: 5, size: groesse)
+            ?? NSFontManager.shared.font(withFamily: name, traits: [], weight: 5, size: groesse)
+    }
+
+    static var alleFamilien: [String] {
+        NSFontManager.shared.availableFontFamilies
+            .filter { !$0.hasPrefix(".") }
+            .sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
+}
+
+enum MarkerForm: String, CaseIterable, Identifiable {
+    case kreis, ring, quadrat, nadel, blase, etikett
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .kreis: return "Kreis gefüllt"
+        case .ring: return "Kreis umrandet"
+        case .quadrat: return "Quadrat"
+        case .nadel: return "Stecknadel"
+        case .blase: return "Sprechblase"
+        case .etikett: return "Etikett „Schritt 1“"
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .kreis: return "1.circle.fill"
+        case .ring: return "1.circle"
+        case .quadrat: return "1.square.fill"
+        case .nadel: return "mappin"
+        case .blase: return "bubble.left.fill"
+        case .etikett: return "tag.fill"
+        }
+    }
+}
+
+enum Zaehlweise: String, CaseIterable, Identifiable {
+    case zahlen, gross, klein, roemisch
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .zahlen: return "1, 2, 3"
+        case .gross: return "A, B, C"
+        case .klein: return "a, b, c"
+        case .roemisch: return "I, II, III"
+        }
+    }
+
+    func text(_ n: Int) -> String {
+        switch self {
+        case .zahlen: return "\(n)"
+        case .gross: return Self.buchstaben(n)
+        case .klein: return Self.buchstaben(n).lowercased()
+        case .roemisch: return Self.roemisch(n)
+        }
+    }
+
+    private static func buchstaben(_ n: Int) -> String {
+        var n = max(1, n)
+        var s = ""
+        while n > 0 {
+            n -= 1
+            s = String(UnicodeScalar(UInt8(65 + n % 26))) + s
+            n /= 26
+        }
+        return s
+    }
+
+    private static func roemisch(_ n: Int) -> String {
+        let werte: [(Int, String)] = [(1000, "M"), (900, "CM"), (500, "D"), (400, "CD"), (100, "C"), (90, "XC"),
+                                      (50, "L"), (40, "XL"), (10, "X"), (9, "IX"), (5, "V"), (4, "IV"), (1, "I")]
+        var rest = max(1, min(n, 3999))
+        var s = ""
+        for (wert, zeichen) in werte {
+            while rest >= wert {
+                s += zeichen
+                rest -= wert
+            }
+        }
+        return s
+    }
+}
+
 struct Strich {
     let id = UUID()
     var punkte: [CGPoint]
@@ -102,8 +225,12 @@ struct TextElement {
     var farbe: Farbe
     var groesse: CGFloat
     var hintergrund: Bool
+    var schriftart: Schriftart = .system
+    var familie: String? = nil
 
-    var schrift: NSFont { NSFont.systemFont(ofSize: groesse, weight: .semibold) }
+    var schrift: NSFont {
+        familie.flatMap { Schriftart.familie($0, groesse, fett: false) } ?? schriftart.schrift(groesse, fett: false)
+    }
 
     var attributiert: NSAttributedString {
         NSAttributedString(string: text.isEmpty ? " " : text,
@@ -124,6 +251,26 @@ struct Nummer {
     var zahl: Int
     var farbe: Farbe
     var radius: CGFloat
+    var form: MarkerForm = .kreis
+    var zaehlweise: Zaehlweise = .zahlen
+    var schriftart: Schriftart = .system
+    var familie: String? = nil
+    /// Optionaler Pfeil vom Marker zu einer Stelle
+    var pfeilZiel: CGPoint?
+
+    var beschriftung: String {
+        let t = zaehlweise.text(zahl)
+        return form == .etikett ? "Schritt \(t)" : t
+    }
+
+    func schrift(_ groesse: CGFloat) -> NSFont {
+        familie.flatMap { Schriftart.familie($0, groesse, fett: true) } ?? schriftart.schrift(groesse)
+    }
+
+    /// Mittelpunkt der eigentlichen Marke (bei der Stecknadel oberhalb der Spitze)
+    var kopf: CGPoint {
+        form == .nadel ? CGPoint(x: mitte.x, y: mitte.y - radius * 1.9) : mitte
+    }
 }
 
 enum Element {
@@ -160,6 +307,8 @@ enum Element {
         case .text(let t):
             return t.rahmen.insetBy(dx: -r, dy: -r).contains(p)
         case .nummer(let n):
+            if hypot(n.kopf.x - p.x, n.kopf.y - p.y) <= n.radius * (n.form == .etikett ? 2.5 : 1.3) + r { return true }
+            if let ziel = n.pfeilZiel, Geometrie.abstand(p, zuStrecke: n.kopf, ziel) <= n.radius * 0.3 + r { return true }
             return hypot(n.mitte.x - p.x, n.mitte.y - p.y) <= n.radius + r
         }
     }
@@ -283,22 +432,94 @@ enum Zeichner {
     }
 
     private static func zeichne(_ n: Nummer, in cg: CGContext) {
-        let r = CGRect(x: n.mitte.x - n.radius, y: n.mitte.y - n.radius, width: n.radius * 2, height: n.radius * 2)
-        cg.setFillColor(n.farbe.nsColor.cgColor)
-        cg.fillEllipse(in: r)
-        cg.setStrokeColor(NSColor.white.cgColor)
-        cg.setLineWidth(max(1.5, n.radius * 0.12))
-        cg.strokeEllipse(in: r.insetBy(dx: n.radius * 0.06, dy: n.radius * 0.06))
+        let farbe = n.farbe.nsColor
+        let r = n.radius
+        let k = n.kopf
+        let hell = n.farbe == .weiss || n.farbe == .gelb
+        var schriftfarbe: NSColor = hell ? .black : .white
+        let text = n.beschriftung
+        let schriftgroesse = r * (text.count >= 3 && n.form != .etikett ? 0.8 : (text.count == 2 ? 0.95 : 1.15))
 
-        let schriftfarbe: NSColor = (n.farbe == .weiss || n.farbe == .gelb) ? .black : .white
-        let text = NSAttributedString(string: "\(n.zahl)", attributes: [
-            .font: NSFont.systemFont(ofSize: n.radius * 1.15, weight: .bold),
-            .foregroundColor: schriftfarbe,
-        ])
-        let g = text.size()
-        mitNSKontext(cg) {
-            text.draw(at: CGPoint(x: n.mitte.x - g.width / 2, y: n.mitte.y - g.height / 2))
+        // Pfeil vom Marker zur Stelle (unter dem Marker)
+        if let ziel = n.pfeilZiel {
+            let pfeil = FormElement(art: .pfeil, start: k, ende: ziel, farbe: n.farbe, breite: max(3, r * 0.22), fuellung: .keine)
+            zeichne(pfeil, in: cg)
         }
+
+        cg.setFillColor(farbe.cgColor)
+        cg.setStrokeColor(NSColor.white.cgColor)
+
+        switch n.form {
+        case .kreis:
+            let rahmen = CGRect(x: k.x - r, y: k.y - r, width: r * 2, height: r * 2)
+            cg.fillEllipse(in: rahmen)
+            cg.setLineWidth(max(1.5, r * 0.12))
+            cg.strokeEllipse(in: rahmen.insetBy(dx: r * 0.06, dy: r * 0.06))
+
+        case .ring:
+            let rahmen = CGRect(x: k.x - r, y: k.y - r, width: r * 2, height: r * 2)
+            let dicke = max(2, r * 0.2)
+            cg.setFillColor(NSColor.white.cgColor)
+            cg.fillEllipse(in: rahmen)
+            cg.setStrokeColor(farbe.cgColor)
+            cg.setLineWidth(dicke)
+            cg.strokeEllipse(in: rahmen.insetBy(dx: dicke / 2, dy: dicke / 2))
+            schriftfarbe = hell ? .black : farbe
+
+        case .quadrat:
+            let rahmen = CGRect(x: k.x - r, y: k.y - r, width: r * 2, height: r * 2)
+            cg.addPath(CGPath(roundedRect: rahmen, cornerWidth: r * 0.35, cornerHeight: r * 0.35, transform: nil))
+            cg.fillPath()
+
+        case .nadel:
+            // Tropfenform: Kreis um den Kopf, Spitze genau auf dem Klickpunkt
+            let abstand = r * 1.9
+            let phi = acos(r / abstand)
+            let start = CGFloat.pi / 2 + phi
+            let bogen = 2 * CGFloat.pi - 2 * phi
+            let pfad = CGMutablePath()
+            pfad.move(to: n.mitte)
+            for i in 0...48 {
+                let w = start + bogen * CGFloat(i) / 48
+                pfad.addLine(to: CGPoint(x: k.x + cos(w) * r, y: k.y + sin(w) * r))
+            }
+            pfad.closeSubpath()
+            cg.addPath(pfad)
+            cg.fillPath()
+            cg.setFillColor(NSColor.white.cgColor)
+            cg.fillEllipse(in: CGRect(x: k.x - r * 0.72, y: k.y - r * 0.72, width: r * 1.44, height: r * 1.44))
+            schriftfarbe = hell ? .black : farbe
+
+        case .blase:
+            let g = attributiert(text, n, schriftgroesse, schriftfarbe).size()
+            let breite = max(r * 2, g.width + r)
+            let rahmen = CGRect(x: k.x - breite / 2, y: k.y - r * 0.9, width: breite, height: r * 1.8)
+            cg.addPath(CGPath(roundedRect: rahmen, cornerWidth: r * 0.35, cornerHeight: r * 0.35, transform: nil))
+            cg.fillPath()
+            cg.move(to: CGPoint(x: rahmen.minX + r * 0.5, y: rahmen.maxY - 1))
+            cg.addLine(to: CGPoint(x: rahmen.minX + r * 0.3, y: rahmen.maxY + r * 0.7))
+            cg.addLine(to: CGPoint(x: rahmen.minX + r * 1.1, y: rahmen.maxY - 1))
+            cg.closePath()
+            cg.fillPath()
+
+        case .etikett:
+            let g = attributiert(text, n, schriftgroesse * 0.85, schriftfarbe).size()
+            let rahmen = CGRect(x: k.x - (g.width + r * 1.2) / 2, y: k.y - r * 0.8,
+                                width: g.width + r * 1.2, height: r * 1.6)
+            cg.addPath(CGPath(roundedRect: rahmen, cornerWidth: r * 0.8, cornerHeight: r * 0.8, transform: nil))
+            cg.fillPath()
+        }
+
+        let groesse = n.form == .etikett ? schriftgroesse * 0.85 : schriftgroesse
+        let beschriftet = attributiert(text, n, groesse, schriftfarbe)
+        let g = beschriftet.size()
+        mitNSKontext(cg) {
+            beschriftet.draw(at: CGPoint(x: k.x - g.width / 2, y: k.y - g.height / 2))
+        }
+    }
+
+    private static func attributiert(_ text: String, _ n: Nummer, _ groesse: CGFloat, _ farbe: NSColor) -> NSAttributedString {
+        NSAttributedString(string: text, attributes: [.font: n.schrift(groesse), .foregroundColor: farbe])
     }
 
     /// AppKit-Textzeichnung braucht einen aktuellen NSGraphicsContext (gespiegelt, weil y nach unten zeigt).

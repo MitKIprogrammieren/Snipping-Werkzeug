@@ -29,7 +29,25 @@ struct Lineal {
 }
 
 private enum Geste {
-    case nichts, zeichnen, form, verpixeln, lineal(versatz: CGPoint), radieren, zuschneiden
+    case nichts, zeichnen, form, verpixeln, lineal(versatz: CGPoint), radieren, zuschneiden, nummer(UUID)
+}
+
+/// Werkzeug-Einstellungen, die über Ausschnitte hinweg erhalten bleiben
+private enum Merker {
+    static func wert<T: RawRepresentable>(_ schluessel: String, _ standard: T) -> T where T.RawValue == String {
+        T(rawValue: UserDefaults.standard.string(forKey: "werkzeug." + schluessel) ?? "") ?? standard
+    }
+    static func zahl(_ schluessel: String, _ standard: Double) -> Double {
+        let d = UserDefaults.standard
+        return d.object(forKey: "werkzeug." + schluessel) == nil ? standard : d.double(forKey: "werkzeug." + schluessel)
+    }
+    static func text(_ schluessel: String) -> String? {
+        let s = UserDefaults.standard.string(forKey: "werkzeug." + schluessel) ?? ""
+        return s.isEmpty ? nil : s
+    }
+    static func setze(_ schluessel: String, _ wert: Any) {
+        UserDefaults.standard.set(wert, forKey: "werkzeug." + schluessel)
+    }
 }
 
 @MainActor
@@ -53,10 +71,20 @@ final class EditorModell: ObservableObject {
     @Published var formFarbe: Farbe = .rot
     @Published var formBreite: CGFloat = 6
     @Published var fuellung: Fuellung = .keine
-    @Published var textFarbe: Farbe = .rot
-    @Published var textGroesse: CGFloat = 36
-    @Published var textHintergrund = false
-    @Published var nummerFarbe: Farbe = .rot
+    @Published var textFarbe: Farbe = Merker.wert("textFarbe", Farbe.rot) { didSet { Merker.setze("textFarbe", textFarbe.rawValue) } }
+    @Published var textGroesse: CGFloat = CGFloat(Merker.zahl("textGroesse", 36)) { didSet { Merker.setze("textGroesse", Double(textGroesse)) } }
+    @Published var textHintergrund = Merker.zahl("textHintergrund", 0) > 0 { didSet { Merker.setze("textHintergrund", textHintergrund ? 1.0 : 0.0) } }
+    @Published var textSchrift: Schriftart = Merker.wert("textSchrift", Schriftart.system) { didSet { Merker.setze("textSchrift", textSchrift.rawValue) } }
+    @Published var nummerFarbe: Farbe = Merker.wert("nummerFarbe", Farbe.rot) { didSet { Merker.setze("nummerFarbe", nummerFarbe.rawValue) } }
+    @Published var nummerForm: MarkerForm = Merker.wert("nummerForm", MarkerForm.kreis) { didSet { Merker.setze("nummerForm", nummerForm.rawValue) } }
+    @Published var nummerZaehlweise: Zaehlweise = Merker.wert("nummerZaehlweise", Zaehlweise.zahlen) { didSet { Merker.setze("nummerZaehlweise", nummerZaehlweise.rawValue) } }
+    @Published var nummerSchrift: Schriftart = Merker.wert("nummerSchrift", Schriftart.system) { didSet { Merker.setze("nummerSchrift", nummerSchrift.rawValue) } }
+    /// Frei gewählte Schriftfamilie (überschreibt die Auswahl oben); leer = keine
+    @Published var textFamilie: String? = Merker.text("textFamilie") { didSet { Merker.setze("textFamilie", textFamilie ?? "") } }
+    @Published var nummerFamilie: String? = Merker.text("nummerFamilie") { didSet { Merker.setze("nummerFamilie", nummerFamilie ?? "") } }
+    @Published var nummerGroesse: CGFloat = CGFloat(Merker.zahl("nummerGroesse", 1)) { didSet { Merker.setze("nummerGroesse", Double(nummerGroesse)) } }
+    /// Womit die Zählung im leeren Bild beginnt
+    @Published var nummerStart = 1
     @Published var verpixelnArt: VerpixelnArt = .pixel
 
     @Published var zuschnitt: CGRect?
@@ -120,6 +148,12 @@ final class EditorModell: ObservableObject {
             verpixelnRahmen = Self.rechteck(start, p).intersection(CGRect(origin: .zero, size: groesse))
         case .lineal(let v):
             lineal?.mitte = CGPoint(x: p.x + v.x, y: p.y + v.y)
+        case .nummer(let id):
+            if let i = elemente.firstIndex(where: { $0.id == id }), case .nummer(var n) = elemente[i] {
+                let weit = hypot(p.x - n.kopf.x, p.y - n.kopf.y) > n.radius * 1.6
+                n.pfeilZiel = weit ? p : nil
+                elemente[i] = .nummer(n)
+            }
         case .radieren:
             radiere(p, radius: radiererRadius)
         case .zuschneiden:
@@ -199,8 +233,7 @@ final class EditorModell: ObservableObject {
             }
             geste = .nichts
         case .nummer:
-            setzeNummer(bei: start)
-            geste = .nichts
+            geste = .nummer(setzeNummer(bei: start))
         default:
             geste = .nichts
         }
@@ -265,14 +298,38 @@ final class EditorModell: ObservableObject {
 
     // MARK: Nummerierte Marker
 
-    private func setzeNummer(bei p: CGPoint) {
+    var naechsteNummer: Int {
         let hoechste = elemente.compactMap { e -> Int? in
             if case .nummer(let n) = e { return n.zahl }
             return nil
-        }.max() ?? 0
-        let radius = min(max(min(groesse.width, groesse.height) * 0.03, 16), 40)
+        }.max()
+        return hoechste.map { $0 + 1 } ?? nummerStart
+    }
+
+    private func setzeNummer(bei p: CGPoint) -> UUID {
+        let radius = min(max(min(groesse.width, groesse.height) * 0.03, 16), 40) * nummerGroesse
         merkeUndo()
-        elemente.append(.nummer(Nummer(mitte: p, zahl: hoechste + 1, farbe: nummerFarbe, radius: radius)))
+        let n = Nummer(mitte: p, zahl: naechsteNummer, farbe: nummerFarbe, radius: radius,
+                       form: nummerForm, zaehlweise: nummerZaehlweise, schriftart: nummerSchrift,
+                       familie: nummerFamilie)
+        elemente.append(.nummer(n))
+        return n.id
+    }
+
+    /// Fragt, mit welcher Zahl die nächsten Marker beginnen sollen.
+    func frageStartwert() {
+        let a = NSAlert()
+        a.messageText = "Zählung beginnen bei"
+        a.informativeText = "Gilt für den nächsten Marker, wenn noch keiner im Bild ist – sonst wird einfach weitergezählt."
+        let feld = NSTextField(string: "\(nummerStart)")
+        feld.frame = NSRect(x: 0, y: 0, width: 120, height: 24)
+        a.accessoryView = feld
+        a.addButton(withTitle: "OK")
+        a.addButton(withTitle: "Abbrechen")
+        a.window.initialFirstResponder = feld
+        if a.runModal() == .alertFirstButtonReturn, let n = Int(feld.stringValue.trimmingCharacters(in: .whitespaces)), n > 0 {
+            nummerStart = n
+        }
     }
 
     // MARK: Text
@@ -287,7 +344,8 @@ final class EditorModell: ObservableObject {
     private func neuerText(bei p: CGPoint) {
         merkeUndo()
         let t = TextElement(position: CGPoint(x: p.x, y: p.y - textGroesse * 0.6), text: "",
-                            farbe: textFarbe, groesse: textGroesse, hintergrund: textHintergrund)
+                            farbe: textFarbe, groesse: textGroesse, hintergrund: textHintergrund,
+                            schriftart: textSchrift, familie: textFamilie)
         elemente.append(.text(t))
         bearbeiteterText = t.id
     }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.0.9 – 15.11.2026
+
+Nummerierte Marker:
+- Sechs Formen: Kreis gefüllt, Kreis umrandet, Quadrat, Stecknadel (Spitze zeigt auf die Stelle), Sprechblase, Etikett „Schritt 1“
+- Zählweisen 1 2 3, A B C, a b c, I II III; Startwert frei wählbar
+- Größen Klein, Mittel, Groß
+- Mit gedrückter Maus ziehen: Pfeil vom Marker zur gemeinten Stelle
+
+Schriften (für Text und Marker):
+- System, Gerundet, Serif, Schreibmaschine, Handschrift, Filzstift, Kreide, Comic, Plakativ
+- „Alle Schriften des Macs …“ – jede installierte Schriftfamilie, im Menü in ihrer eigenen Schrift
+- Gewählte Einstellungen für Text und Marker bleiben für die nächsten Ausschnitte erhalten
+
 ## 0.0.8 – 15.11.2026
 
 - Größeres App-Symbol: richtige macOS-Kachel, damit macOS es nicht verkleinert in eine graue Kachel setzt

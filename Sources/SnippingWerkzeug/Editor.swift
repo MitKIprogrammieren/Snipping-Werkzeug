@@ -305,9 +305,35 @@ struct BearbeitungsWerkzeuge: View {
         return e
     }
 
+    private func schriften(_ aktuell: Schriftart, familie: String?,
+                           _ setzen: @escaping (Schriftart, String?) -> Void) -> [Klappmenue.Eintrag] {
+        var e: [Klappmenue.Eintrag] = [.trenner, .ueberschrift("Schriftart")]
+        for s in Schriftart.allCases {
+            e.append(.init(titel: s.name, schrift: s.schrift(14, fett: false), an: familie == nil && s == aktuell) { setzen(s, nil) })
+        }
+        if let familie {
+            e.append(.init(titel: familie, schrift: Schriftart.familie(familie, 14, fett: false), an: true) { setzen(aktuell, familie) })
+        }
+        e.append(.init(titel: "Alle Schriften des Macs …", symbol: "textformat.alt") {
+            // Zweites Menü mit jeder installierten Schriftfamilie, jeweils in der eigenen Schrift
+            var liste: [Klappmenue.Eintrag] = [.ueberschrift("Alle Schriften")]
+            for name in Schriftart.alleFamilien {
+                liste.append(.init(titel: name, schrift: Schriftart.familie(name, 14, fett: false), an: name == familie) {
+                    setzen(aktuell, name)
+                })
+            }
+            Klappmenue.zeige(liste)
+        })
+        return e
+    }
+
     private var textMenue: [Klappmenue.Eintrag] {
         let m = self.m
         var e = farben(m.textFarbe) { m.textFarbe = $0 }
+        e += schriften(m.textSchrift, familie: m.textFamilie) { art, fam in
+            m.textSchrift = art
+            m.textFamilie = fam
+        }
         e.append(.trenner)
         e.append(.ueberschrift("Größe"))
         for (name, wert) in [("Klein", CGFloat(22)), ("Mittel", 36), ("Groß", 56)] {
@@ -320,7 +346,35 @@ struct BearbeitungsWerkzeuge: View {
 
     private var nummerMenue: [Klappmenue.Eintrag] {
         let m = self.m
-        return farben(m.nummerFarbe) { m.nummerFarbe = $0 }
+        var e: [Klappmenue.Eintrag] = [.ueberschrift("Form")]
+        for f in MarkerForm.allCases {
+            e.append(.init(titel: f.name, symbol: f.symbol, an: f == m.nummerForm) {
+                m.nummerForm = f
+                if m.werkzeug != .nummer { m.waehle(.nummer) }
+            })
+        }
+        e.append(.trenner)
+        e.append(.ueberschrift("Zählweise"))
+        for z in Zaehlweise.allCases {
+            e.append(.init(titel: z.name, an: z == m.nummerZaehlweise) { m.nummerZaehlweise = z })
+        }
+        e.append(.init(titel: "Nächster Marker: \(m.nummerZaehlweise.text(m.naechsteNummer)) – Startwert ändern …", symbol: "number") {
+            m.frageStartwert()
+        })
+        e.append(.trenner)
+        e.append(.ueberschrift("Größe"))
+        for (name, wert) in [("Klein", CGFloat(0.7)), ("Mittel", 1), ("Groß", 1.4)] {
+            e.append(.init(titel: name, an: abs(wert - m.nummerGroesse) < 0.01) { m.nummerGroesse = wert })
+        }
+        e.append(.trenner)
+        e += farben(m.nummerFarbe) { m.nummerFarbe = $0 }
+        e += schriften(m.nummerSchrift, familie: m.nummerFamilie) { art, fam in
+            m.nummerSchrift = art
+            m.nummerFamilie = fam
+        }
+        e.append(.trenner)
+        e.append(.ueberschrift("Tipp: Mit gedrückter Maus ziehen = Pfeil vom Marker"))
+        return e
     }
 
     private var verpixelnMenue: [Klappmenue.Eintrag] {

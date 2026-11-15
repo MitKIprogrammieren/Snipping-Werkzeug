@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.0.6 – 15.11.2026
+
+Neue Werkzeuge im Editor:
+- Formen: Pfeil, Linie, Rechteck, Kreis/Ellipse – mit Farbe, Stärke und Füllung (keine, halbtransparent, voll); mit ⇧ gerade Linien in 45°-Schritten und gleichmäßige Formen
+- Text: ins Bild klicken und tippen, drei Größen, Farben, optional weißer Hintergrund; Doppelklick bearbeitet einen Text nachträglich
+- Nummerierte Marker ①②③ – jeder Klick setzt die nächste Zahl
+- Verpixeln, Weichzeichnen oder schwarzer Balken – fest ins Bild eingerechnet
+- Radierer entfernt auch Formen, Texte und Marker
+- Jedes Werkzeug hat ein eigenes Optionen-Menü (Pfeil neben dem Knopf) und ein frei belegbares Kürzel
+
+Außerdem:
+- Textaktionen erkennen jetzt auch QR- und Strichcodes (Link öffnen, kopieren)
+- Verlauf: die letzten 30 Ausschnitte mit Miniaturen, auch nach einem Neustart (abschaltbar in den Einstellungen)
+- Datei öffnen (⌘O) und Bilder oder Videos per Drag & Drop ins Fenster ziehen
+- Videos kürzen mit der eingebauten Kürzen-Ansicht von macOS, gespeichert als „… (gekürzt).mp4“
+- Mac-Darstellung: Werkzeuge in einer eigenen Zeile unter der Titelleiste
+
 ## 0.0.5 – 15.11.2026
 
 - Neu: Ausschnitte anheften – schwebende Fenster, die immer im Vordergrund bleiben

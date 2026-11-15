@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import CoreImage
 import ImageIO
 import UniformTypeIdentifiers
 @preconcurrency import Vision
@@ -148,6 +149,34 @@ enum Bildbearbeitung {
     }
 }
 
+extension Bildbearbeitung {
+    /// Verpixelt, verwischt oder schwärzt einen Bereich (Bildpixel, Ursprung oben links) fest im Bild.
+    static func verpixle(_ bild: CGImage, rahmen r: CGRect, art: VerpixelnArt) -> CGImage? {
+        let original = CIImage(cgImage: bild)
+        let hoehe = CGFloat(bild.height)
+        // Core Image rechnet von unten links
+        let bereich = CGRect(x: r.minX, y: hoehe - r.maxY, width: r.width, height: r.height).integral
+        let ausschnitt = original.cropped(to: bereich).clampedToExtent()
+        let bearbeitet: CIImage
+        switch art {
+        case .pixel:
+            let groesse = max(8, min(r.width, r.height) / 10)
+            bearbeitet = ausschnitt.applyingFilter("CIPixellate", parameters: [
+                kCIInputScaleKey: groesse,
+                kCIInputCenterKey: CIVector(x: bereich.minX, y: bereich.minY),
+            ])
+        case .weich:
+            bearbeitet = ausschnitt.applyingFilter("CIGaussianBlur", parameters: [
+                kCIInputRadiusKey: max(10, min(r.width, r.height) / 6),
+            ])
+        case .balken:
+            bearbeitet = CIImage(color: CIColor(red: 0.08, green: 0.08, blue: 0.08))
+        }
+        let ergebnis = bearbeitet.cropped(to: bereich).composited(over: original)
+        return CIContext().createCGImage(ergebnis, from: original.extent)
+    }
+}
+
 /// Sorgt dafür, dass eine Continuation nur einmal fortgesetzt wird.
 final class Einmal: @unchecked Sendable {
     private let lock = NSLock()
@@ -163,6 +192,27 @@ final class Einmal: @unchecked Sendable {
 }
 
 enum Texterkennung {
+    /// QR- und Strichcodes im Bild
+    static func codes(_ bild: CGImage) async -> [String] {
+        await withCheckedContinuation { (c: CheckedContinuation<[String], Never>) in
+            let einmal = Einmal()
+            let anfrage = VNDetectBarcodesRequest { req, _ in
+                var gesehen = Set<String>()
+                let werte = ((req.results as? [VNBarcodeObservation]) ?? [])
+                    .compactMap { $0.payloadStringValue }
+                    .filter { gesehen.insert($0).inserted }
+                einmal.ausfuehren { c.resume(returning: werte) }
+            }
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try VNImageRequestHandler(cgImage: bild, options: [:]).perform([anfrage])
+                } catch {
+                    einmal.ausfuehren { c.resume(returning: []) }
+                }
+            }
+        }
+    }
+
     static func erkenne(_ bild: CGImage) async -> String {
         await withCheckedContinuation { (c: CheckedContinuation<String, Never>) in
             let einmal = Einmal()

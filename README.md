@@ -6,7 +6,9 @@ Das Snipping Tool von Windows 11 als native Mac-App (Swift/SwiftUI, ScreenCaptur
 
 - **Ausschnitte:** Rechteck, Freihand, Fenster, Vollbild – mit optionaler Verzögerung
 - **Bildschirmaufnahme:** Bereich, Fenster oder Vollbild als MP4, auf Wunsch mit Systemton und Mikrofon
-- **Bearbeiten:** Kugelschreiber, Textmarker, Radierer, Zuschneiden, Rückgängig
+- **Bearbeiten:** Kugelschreiber, Textmarker, Formen und Pfeile, Text, nummerierte Marker, Verpixeln, Radierer, Lineal, Zuschneiden, Rückgängig
+- **Anheften:** Ausschnitte als schwebende Fenster immer im Vordergrund
+- **Verlauf:** die letzten 30 Ausschnitte
 - **Texterkennung:** Text aus dem Ausschnitt erkennen und kopieren
 - **Ausgabe:** automatisch in die Zwischenablage und in einen Ordner, Speichern unter, Teilen
 - **Zwei Darstellungen:** Windows oder Mac, umschaltbar in den Einstellungen
@@ -23,10 +25,11 @@ Alle Kürzel lassen sich in den Einstellungen ändern oder abschalten. Standard:
 | ⌃⇧A | Ausschnitt aufnehmen und anheften (überall) |
 | ⌃⇧D | Angeheftete Ausschnitte: Durchklicken ein/aus (überall) |
 | ⌘N | Neuer Ausschnitt |
+| ⌘O | Datei öffnen |
 | ⇧⌘C | Ausschnitt kopieren |
 | ⌘S | Speichern unter |
 | ⌘Z / ⇧⌘Z | Rückgängig / Wiederholen |
-| – | Kugelschreiber, Textmarker, Radierer, Zuschneiden, Text erkennen |
+| – | Kugelschreiber, Textmarker, Formen, Text, Marker, Verpixeln, Radierer, Lineal, Zuschneiden, Textaktionen |
 
 Fest sind nur esc (abbrechen) und ↩ (bestätigen).
 

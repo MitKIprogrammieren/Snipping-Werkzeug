@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 import AVKit
+import UniformTypeIdentifiers
+import ImageIO
 
 @MainActor
 final class HauptZustand: ObservableObject {
@@ -21,7 +23,9 @@ final class HauptZustand: ObservableObject {
         }
     }
     @Published var meldung = ""
+    @Published var kuerztGerade = false
     let player = AVPlayer()
+    weak var playerView: AVPlayerView?
 
     var editor: EditorModell? {
         if case .bild(let m) = inhalt { return m }
@@ -66,6 +70,68 @@ final class HauptZustand: ObservableObject {
             }
         } else if let v = video {
             Teilen.zeige(v)
+        }
+    }
+
+    // MARK: Öffnen
+
+    func oeffnen() {
+        let p = NSOpenPanel()
+        p.allowedContentTypes = [.image, .movie]
+        p.allowsMultipleSelection = false
+        p.prompt = "Öffnen"
+        if p.runModal() == .OK, let url = p.url { laden(url) }
+    }
+
+    @discardableResult
+    func laden(_ url: URL) -> Bool {
+        let typ = UTType(filenameExtension: url.pathExtension)
+        if typ?.conforms(to: .movie) == true || typ?.conforms(to: .audiovisualContent) == true {
+            Hauptfenster.shared.zeigeVideo(url, meldung: "Geöffnet: \(url.lastPathComponent)")
+            return true
+        }
+        guard let quelle = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let bild = CGImageSourceCreateImageAtIndex(quelle, 0, nil) else {
+            meldung = "„\(url.lastPathComponent)“ ist kein Bild"
+            return false
+        }
+        Hauptfenster.shared.zeigeBild(bild, meldung: "Geöffnet: \(url.lastPathComponent)")
+        return true
+    }
+
+    // MARK: Video kürzen
+
+    func videoKuerzen() {
+        guard let pv = playerView, pv.canBeginTrimming else {
+            meldung = "Dieses Video kann nicht gekürzt werden"
+            return
+        }
+        pv.beginTrimming { [weak self] ergebnis in
+            guard ergebnis == .okButton else { return }
+            Task { @MainActor in await self?.exportiereGekuerzt() }
+        }
+    }
+
+    private func exportiereGekuerzt() async {
+        guard let quelle = video, let item = player.currentItem else { return }
+        kuerztGerade = true
+        defer { kuerztGerade = false }
+        let dauer = (try? await item.asset.load(.duration)) ?? .positiveInfinity
+        let von = item.reversePlaybackEndTime.isValid ? item.reversePlaybackEndTime : .zero
+        let bis = item.forwardPlaybackEndTime.isValid ? item.forwardPlaybackEndTime : dauer
+        guard let sitzung = AVAssetExportSession(asset: item.asset, presetName: AVAssetExportPresetPassthrough) else {
+            meldung = "Kürzen nicht möglich"
+            return
+        }
+        sitzung.timeRange = CMTimeRange(start: von, end: bis)
+        let name = quelle.deletingPathExtension().lastPathComponent + " (gekürzt).mp4"
+        let ziel = quelle.deletingLastPathComponent().appendingPathComponent(name)
+        try? FileManager.default.removeItem(at: ziel)
+        do {
+            try await sitzung.export(to: ziel, as: .mp4)
+            Hauptfenster.shared.zeigeVideo(ziel, meldung: "Gekürzt gespeichert: \(name)")
+        } catch {
+            Meldung.fehler(error)
         }
     }
 
@@ -161,11 +227,11 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
             // Leere Symbolleiste → hohe Titelleiste, Ampelknöpfe mittig neben Logo und Titel
             w.toolbar = NSToolbar(identifier: "SnippingWerkzeugLeiste")
             w.toolbarStyle = .unified
-            w.minSize = NSSize(width: 1000, height: 460)
+            w.minSize = NSSize(width: 900, height: 500)
         } else {
             w.toolbar = nil
             w.toolbarStyle = .automatic
-            w.minSize = NSSize(width: 960, height: 460)
+            w.minSize = NSSize(width: 1240, height: 500)
         }
         // Windows: Mac-Ampel ausblenden, eigene Knöpfe rechts
         for art in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
@@ -180,7 +246,7 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
 
     private func passeGroesseAn(_ w: NSWindow, an pixel: CGSize) {
         let faktor = w.backingScaleFactor
-        let chrome: CGFloat = Stil.aktuell.istWindows ? (32 + 48 + 1 + 24) : (52 + 1 + 24)
+        let chrome: CGFloat = Stil.aktuell.istWindows ? (32 + 48 + 1 + 24) : (52 + 38 + 2 + 24)
         let bereich = (w.screen ?? NSScreen.main)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         var groesse = NSSize(width: pixel.width / faktor + 96, height: pixel.height / faktor + chrome + 96)
         groesse.width = min(max(groesse.width, w.minSize.width), bereich.width * 0.9)
@@ -223,8 +289,6 @@ struct HauptAnsicht: View {
                         Trenner()
                         AufnahmeKnoepfe()
                         Spacer(minLength: 8)
-                        if let m = zustand.editor { BearbeitungsWerkzeuge(m: m) }
-                        Spacer(minLength: 8)
                         AusgabeKnoepfe(zustand: zustand)
                     }
                     .padding(.trailing, 12)
@@ -232,11 +296,32 @@ struct HauptAnsicht: View {
                 .frame(height: 52)
                 .background(.bar)
 
+                if let m = zustand.editor {
+                    Divider()
+                    HStack {
+                        Spacer()
+                        BearbeitungsWerkzeuge(m: m)
+                        Spacer()
+                    }
+                    .frame(height: 38)
+                    .background(.bar)
+                }
                 Divider()
             }
 
             inhaltsBereich
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .dropDestination(for: URL.self) { urls, _ in
+                    guard let url = urls.first else { return false }
+                    return zustand.laden(url)
+                }
+                .overlay {
+                    if zustand.kuerztGerade {
+                        ProgressView("Video wird gekürzt …")
+                            .padding(20)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(.regularMaterial))
+                    }
+                }
 
             StatusZeile(zustand: zustand)
         }
@@ -252,7 +337,7 @@ struct HauptAnsicht: View {
         case .bild(let m):
             EditorFlaeche(m: m)
         case .video:
-            VideoPlayer(player: zustand.player)
+            VideoAnsicht(zustand: zustand)
         }
     }
 }
@@ -321,6 +406,7 @@ struct AusgabeKnoepfe: View {
         HStack(spacing: 2) {
             if zustand.hatInhalt {
                 if zustand.video != nil {
+                    LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
                     LeistenKnopf(symbol: "folder", hilfe: "Im Finder zeigen") { zustand.imFinderZeigen() }
                 }
                 if zustand.editor != nil {
@@ -331,6 +417,7 @@ struct AusgabeKnoepfe: View {
                 LeistenKnopf(symbol: "square.and.arrow.up", hilfe: "Teilen") { zustand.teilen() }
                 Trenner()
             }
+            LeistenKnopf(symbol: "clock.arrow.circlepath", hilfe: "Verlauf") { Verlauf.zeigeMenue() }
             LeistenKnopf(symbol: "gearshape", hilfe: "Einstellungen") { EinstellungenFenster.shared.zeigen() }
         }
     }
@@ -408,3 +495,22 @@ struct BildGroesse: View {
     }
 }
 
+
+/// Videovorschau mit eingebauter Kürzen-Funktion von macOS (AVPlayerView)
+struct VideoAnsicht: NSViewRepresentable {
+    @ObservedObject var zustand: HauptZustand
+
+    func makeNSView(context: Context) -> AVPlayerView {
+        let v = AVPlayerView()
+        v.player = zustand.player
+        v.controlsStyle = .floating
+        v.showsSharingServiceButton = false
+        zustand.playerView = v
+        return v
+    }
+
+    func updateNSView(_ v: AVPlayerView, context: Context) {
+        if v.player !== zustand.player { v.player = zustand.player }
+        zustand.playerView = v
+    }
+}

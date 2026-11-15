@@ -366,6 +366,7 @@ final class AufnahmeSteuerung {
     // MARK: Ergebnisse
 
     private func fertigBild(_ bild: CGImage) {
+        Verlauf.merke(bild)
         var teile: [String] = []
         if Einstellungen.autoKopieren {
             Ablage.kopiere(bild)

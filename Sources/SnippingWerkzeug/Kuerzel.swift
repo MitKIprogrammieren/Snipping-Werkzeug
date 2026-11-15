@@ -105,8 +105,8 @@ struct Kuerzel: Codable, Equatable, Hashable {
 
 enum Aktion: String, CaseIterable, Identifiable {
     case ausschnittGlobal, videoGlobal, vollbildGlobal, anheftenGlobal, durchklickenGlobal
-    case neu, anheften, kopieren, speichern, rueckgaengig, wiederholen
-    case stift, marker, radierer, lineal, zuschneiden, texterkennung
+    case neu, oeffnen, anheften, kopieren, speichern, rueckgaengig, wiederholen
+    case stift, marker, form, text, nummer, verpixeln, radierer, lineal, zuschneiden, texterkennung
 
     var id: String { rawValue }
 
@@ -119,6 +119,11 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .durchklickenGlobal: return "Angeheftete: Durchklicken ein/aus"
         case .anheften: return "Ausschnitt anheften"
         case .neu: return "Neuer Ausschnitt"
+        case .oeffnen: return "Datei öffnen"
+        case .form: return "Formen"
+        case .text: return "Text"
+        case .nummer: return "Nummerierte Marker"
+        case .verpixeln: return "Verpixeln"
         case .kopieren: return "Ausschnitt kopieren"
         case .speichern: return "Speichern unter"
         case .rueckgaengig: return "Rückgängig"
@@ -152,7 +157,8 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .speichern: return Kuerzel(tastenCode: kVK_ANSI_S, zeichen: "s", flags: [.command])
         case .rueckgaengig: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command])
         case .wiederholen: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command, .shift])
-        case .stift, .marker, .radierer, .lineal, .zuschneiden, .texterkennung: return nil
+        case .oeffnen: return Kuerzel(tastenCode: kVK_ANSI_O, zeichen: "o", flags: [.command])
+        case .stift, .marker, .form, .text, .nummer, .verpixeln, .radierer, .lineal, .zuschneiden, .texterkennung: return nil
         }
     }
 }

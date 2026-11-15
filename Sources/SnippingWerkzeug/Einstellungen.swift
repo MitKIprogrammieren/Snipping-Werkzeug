@@ -12,6 +12,7 @@ enum Schluessel {
     static let mauszeiger = "mauszeiger"
     static let systemton = "systemton"
     static let mikrofon = "mikrofon"
+    static let verlauf = "verlauf"
 }
 
 enum Einstellungen {
@@ -33,6 +34,7 @@ enum Einstellungen {
             Schluessel.mauszeiger: true,
             Schluessel.systemton: false,
             Schluessel.mikrofon: false,
+            Schluessel.verlauf: true,
         ])
     }
 
@@ -63,6 +65,7 @@ struct EinstellungenAnsicht: View {
     @AppStorage(Schluessel.mauszeiger) private var mauszeiger = true
     @AppStorage(Schluessel.systemton) private var systemton = false
     @AppStorage(Schluessel.mikrofon) private var mikrofon = false
+    @AppStorage(Schluessel.verlauf) private var verlauf = true
 
     var body: some View {
         Form {
@@ -83,6 +86,7 @@ struct EinstellungenAnsicht: View {
             Section("Ausschnitte") {
                 Toggle("Automatisch in die Zwischenablage kopieren", isOn: $autoKopieren)
                 Toggle("Automatisch speichern", isOn: $autoSpeichern)
+                Toggle("Verlauf der letzten \(Verlauf.maximal) Ausschnitte behalten", isOn: $verlauf)
                 LabeledContent("Speicherort") {
                     HStack {
                         Text((ordner as NSString).abbreviatingWithTildeInPath)

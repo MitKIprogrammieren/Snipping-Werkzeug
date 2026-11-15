@@ -92,6 +92,9 @@ struct WindowsLeiste: View {
             if let m = zustand.editor {
                 BearbeitungsWerkzeuge(m: m, mitRueckgaengig: false)
             }
+            if zustand.video != nil {
+                LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
+            }
             Spacer(minLength: 12)
 
             if let m = zustand.editor {
@@ -105,6 +108,7 @@ struct WindowsLeiste: View {
                 LeistenKnopf(symbol: "doc.on.doc", hilfe: k.hilfe("Kopieren", .kopieren)) { zustand.kopieren() }
                 LeistenKnopf(symbol: "square.and.arrow.up", hilfe: "Teilen") { zustand.teilen() }
             }
+            LeistenKnopf(symbol: "clock.arrow.circlepath", hilfe: "Verlauf") { Verlauf.zeigeMenue() }
             MehrMenue(zustand: zustand)
         }
         .padding(.horizontal, 8)
@@ -225,6 +229,8 @@ struct MehrMenue: View {
     var body: some View {
         LeistenKnopf(symbol: "ellipsis", hilfe: "Weitere Optionen") {
             var eintraege: [Klappmenue.Eintrag] = []
+            eintraege.append(.init(titel: "Datei öffnen …", symbol: "doc") { zustand.oeffnen() })
+            eintraege.append(.trenner)
             if zustand.video != nil {
                 eintraege.append(.init(titel: "Im Finder zeigen", symbol: "folder") { zustand.imFinderZeigen() })
             }

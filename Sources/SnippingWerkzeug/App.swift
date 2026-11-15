@@ -35,6 +35,8 @@ struct BefehlsMenues: Commands {
         CommandGroup(replacing: .newItem) {
             Button("Neuer Ausschnitt") { AufnahmeSteuerung.shared.neu() }
                 .keyboardShortcut(k.shortcut(.neu))
+            Button("Öffnen …") { Hauptfenster.shared.zustand.oeffnen() }
+                .keyboardShortcut(k.shortcut(.oeffnen))
         }
         CommandGroup(replacing: .saveItem) {
             Button("Speichern unter …") { Hauptfenster.shared.zustand.speichern() }
@@ -56,6 +58,14 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.stift))
             Button("Textmarker") { editor?.waehle(.marker) }
                 .keyboardShortcut(k.shortcut(.marker))
+            Button("Formen") { editor?.waehle(.form) }
+                .keyboardShortcut(k.shortcut(.form))
+            Button("Text") { editor?.waehle(.text) }
+                .keyboardShortcut(k.shortcut(.text))
+            Button("Nummerierte Marker") { editor?.waehle(.nummer) }
+                .keyboardShortcut(k.shortcut(.nummer))
+            Button("Verpixeln") { editor?.waehle(.verpixeln) }
+                .keyboardShortcut(k.shortcut(.verpixeln))
             Button("Radierer") { editor?.waehle(.radierer) }
                 .keyboardShortcut(k.shortcut(.radierer))
             Button("Ausschnitt anheften") { Hauptfenster.shared.zustand.anheften() }

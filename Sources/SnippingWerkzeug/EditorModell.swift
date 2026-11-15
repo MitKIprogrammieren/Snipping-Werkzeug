@@ -70,6 +70,11 @@ final class EditorModell: ObservableObject {
     @Published var erkannteCodes: [String] = []
     @Published var erkenntGerade = false
 
+    // Automatisch schwärzen
+    @Published var zeigeSchwaerzen = false
+    @Published var schwaerzFunde: [SchwaerzFund] = []
+    @Published var schwaerzAuswahl: Set<UUID> = []
+
     private var geste: Geste?
     private var kante: CGFloat?      // Abstand der Linealkante, an der gerade gezeichnet wird
     private var undoStapel: [Schnappschuss] = []
@@ -362,6 +367,12 @@ final class EditorModell: ObservableObject {
     func zuschneidenAbbrechen() {
         zuschnitt = nil
         werkzeug = .keins
+    }
+
+    /// Ersetzt das Grundbild (z. B. nach dem Schwärzen) – mit Rückgängig-Schritt
+    func ersetzeBild(_ neu: CGImage) {
+        merkeUndo()
+        bild = neu
     }
 
     // MARK: Rückgängig

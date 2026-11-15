@@ -21,9 +21,12 @@ struct EditorFlaeche: View {
                 .frame(width: geo.size.width, height: geo.size.height)
         }
         .background(stil.flaeche)
+        .overlay(alignment: .topTrailing) {
+            if m.zeigeSchwaerzen { SchwaerzenAnsicht(m: m) }
+        }
         .overlay {
             if m.erkenntGerade {
-                ProgressView("Text wird erkannt …")
+                ProgressView("Text wird gelesen …")
                     .padding(20)
                     .background(RoundedRectangle(cornerRadius: 10).fill(.regularMaterial))
             }
@@ -53,6 +56,15 @@ struct EditorFlaeche: View {
                                style: StrokeStyle(lineWidth: 1.5 / s, dash: [6 / s, 4 / s]))
                 }
                 if let l = m.lineal { zeichneLineal(l, s: s, in: ctx) }
+                if m.zeigeSchwaerzen {
+                    for f in m.schwaerzFunde {
+                        let an = m.schwaerzAuswahl.contains(f.id)
+                        let r = f.rahmen.insetBy(dx: -3, dy: -3)
+                        if an { ctx.fill(Path(r), with: .color(Color.red.opacity(0.15))) }
+                        ctx.stroke(Path(r), with: .color(an ? Color.red : Color.gray),
+                                   style: StrokeStyle(lineWidth: 2 / s, dash: [5 / s, 3 / s]))
+                    }
+                }
             }
 
             if m.werkzeug == .zuschneiden, let z = m.zuschnitt {
@@ -224,6 +236,10 @@ struct BearbeitungsWerkzeuge: View {
                 OptionenKnopf(kennung: "nummer", farbe: m.nummerFarbe) { nummerMenue }
                 LeistenKnopf(symbol: m.verpixelnArt.symbol, hilfe: k.hilfe(m.verpixelnArt.name, .verpixeln), aktiv: m.werkzeug == .verpixeln) { m.waehle(.verpixeln) }
                 OptionenKnopf(kennung: "verpixeln", farbe: nil) { verpixelnMenue }
+                LeistenKnopf(symbol: "eye.slash", hilfe: k.hilfe("Automatisch schwärzen (IP, E-Mail, Passwörter …)", .schwaerzen),
+                             aktiv: m.zeigeSchwaerzen) {
+                    Task { await m.sucheSensibleDaten() }
+                }
                 LeistenKnopf(symbol: "eraser", hilfe: k.hilfe("Radierer", .radierer), aktiv: m.werkzeug == .radierer) { m.waehle(.radierer) }
                 LeistenKnopf(symbol: "ruler", hilfe: k.hilfe("Lineal (mit dem Mausrad drehen)", .lineal), aktiv: m.lineal != nil) { m.schalteLineal() }
                 LeistenKnopf(symbol: "crop", hilfe: k.hilfe("Zuschneiden", .zuschneiden)) { m.waehle(.zuschneiden) }

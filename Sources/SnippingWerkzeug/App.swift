@@ -66,6 +66,10 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.nummer))
             Button("Verpixeln") { editor?.waehle(.verpixeln) }
                 .keyboardShortcut(k.shortcut(.verpixeln))
+            Button("Automatisch schwärzen") {
+                if let m = editor { Task { await m.sucheSensibleDaten() } }
+            }
+            .keyboardShortcut(k.shortcut(.schwaerzen))
             Button("Radierer") { editor?.waehle(.radierer) }
                 .keyboardShortcut(k.shortcut(.radierer))
             Button("Ausschnitt anheften") { Hauptfenster.shared.zustand.anheften() }

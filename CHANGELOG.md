@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.7 – 15.11.2026
+
+- Neu: Automatisch schwärzen (Auge-durchgestrichen-Knopf) – die Texterkennung sucht IP- und MAC-Adressen, E-Mail-Adressen, Telefonnummern, IBANs, Passwörter (hinter „Passwort:“, „PIN:“ …), Schlüssel/Tokens und Links
+  - Treffer werden im Bild markiert und rechts aufgelistet, einzeln an- und abwählbar (Tokens und Links standardmäßig aus)
+  - Wahlweise Pixel, Weichzeichnen oder schwarzer Balken, mit ⌘Z rückgängig
+
 ## 0.0.6 – 15.11.2026
 
 Neue Werkzeuge im Editor:

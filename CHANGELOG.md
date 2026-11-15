@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.2 – 15.11.2026
+
+- Alle Tastenkürzel sind in den Einstellungen änderbar: ins Feld klicken, neue Kombination drücken
+- Pro Kürzel „Kein Kürzel“ und „Zurück auf Standard“, dazu „Alle zurücksetzen“
+- Warnung, wenn ein Kürzel schon vergeben ist – in der App oder von macOS bzw. einer anderen App
+- Neue globale Kürzel: Bildschirmaufnahme (Standard ⌃⇧R, wie Win+Umschalt+R) und Vollbild sofort aufnehmen (ohne Standard)
+- Neues Menü „Werkzeuge“ mit Kugelschreiber, Textmarker, Radierer, Zuschneiden und Text erkennen – auch diese mit eigenen Kürzeln belegbar
+- Menüleisten-Symbol und Hinweistexte zeigen immer die aktuellen Kürzel
+
 ## 0.0.1 – 15.11.2026
 
 Erste Version.

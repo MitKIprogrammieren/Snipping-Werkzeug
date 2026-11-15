@@ -13,14 +13,20 @@ Das Snipping Tool von Windows 11 als native Mac-App (Swift/SwiftUI, ScreenCaptur
 
 ## Tastenkürzel
 
+Alle Kürzel lassen sich in den Einstellungen ändern oder abschalten. Standard:
+
 | Kürzel | Aktion |
 |---|---|
 | ⌃⇧S | Aufnahmeleiste öffnen (überall) bzw. laufende Aufnahme beenden |
+| ⌃⇧R | Bildschirmaufnahme (überall) |
+| – | Vollbild sofort aufnehmen (überall) |
 | ⌘N | Neuer Ausschnitt |
 | ⇧⌘C | Ausschnitt kopieren |
 | ⌘S | Speichern unter |
 | ⌘Z / ⇧⌘Z | Rückgängig / Wiederholen |
-| esc | Abbrechen |
+| – | Kugelschreiber, Textmarker, Radierer, Zuschneiden, Text erkennen |
+
+Fest sind nur esc (abbrechen) und ↩ (bestätigen).
 
 ## Bauen und installieren
 

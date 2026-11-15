@@ -18,6 +18,7 @@ final class AufnahmeSteuerung {
     private var rahmenFenster: NSWindow?
     private var hauptWarSichtbar = false
     private var laeuft = false
+    private var artFuerDiesenLauf: Art?
 
     var nimmtAuf: Bool { aufnahme != nil }
 
@@ -32,14 +33,16 @@ final class AufnahmeSteuerung {
         }
     }
 
-    func zeigeLeiste() {
+    func zeigeLeiste(art: Art? = nil) {
+        if let art { UserDefaults.standard.set(art.rawValue, forKey: Schluessel.art) }
         if nimmtAuf {
             stoppeVideo(verwerfen: false)
             return
         }
         guard !laeuft else { return }
         if leiste != nil {
-            schliesseLeiste()
+            // Gleiches Kürzel noch einmal schließt die Leiste, ein anderes (z. B. Video) lässt sie offen
+            if art == nil { schliesseLeiste() }
             return
         }
         let panel = SchwebePanel.erstelle()
@@ -60,9 +63,10 @@ final class AufnahmeSteuerung {
         entferneEsc()
     }
 
-    func starte(modus: Modus) {
+    func starte(modus: Modus, art: Art? = nil) {
         guard !laeuft, !nimmtAuf else { return }
         laeuft = true
+        artFuerDiesenLauf = art
         schliesseLeiste()
         let haupt = Hauptfenster.shared.fenster
         hauptWarSichtbar = haupt?.isVisible ?? false
@@ -77,7 +81,8 @@ final class AufnahmeSteuerung {
             abgebrochen()
             return
         }
-        let art = Einstellungen.art
+        let art = artFuerDiesenLauf ?? Einstellungen.art
+        artFuerDiesenLauf = nil
         let v = Einstellungen.verzoegerung
         if v > 0 {
             await countdown(v)

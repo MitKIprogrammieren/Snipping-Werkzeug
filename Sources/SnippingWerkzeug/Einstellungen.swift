@@ -105,12 +105,24 @@ struct EinstellungenAnsicht: View {
                 Toggle("Mikrofon aufnehmen", isOn: $mikrofon)
             }
 
-            Section("Tastenkürzel") {
-                LabeledContent("Neuer Ausschnitt (überall)", value: "⌃⇧S")
-                LabeledContent("Neuer Ausschnitt (in der App)", value: "⌘N")
-                LabeledContent("Ausschnitt kopieren", value: "⇧⌘C")
-                LabeledContent("Speichern unter", value: "⌘S")
-                LabeledContent("Abbrechen", value: "esc")
+            Section {
+                ForEach(Aktion.allCases.filter(\.global)) { a in KuerzelZeile(aktion: a) }
+            } header: {
+                Text("Tastenkürzel – überall")
+            } footer: {
+                Text("Funktionieren auch, wenn die App im Hintergrund ist.")
+            }
+
+            Section {
+                ForEach(Aktion.allCases.filter { !$0.global }) { a in KuerzelZeile(aktion: a) }
+            } header: {
+                Text("Tastenkürzel – in der App")
+            } footer: {
+                HStack {
+                    Text("esc bricht ab, ↩ bestätigt – diese beiden sind fest.")
+                    Spacer()
+                    Button("Alle zurücksetzen") { KuerzelSpeicher.shared.allesZuruecksetzen() }
+                }
             }
 
             Section("Über") {
@@ -118,7 +130,7 @@ struct EinstellungenAnsicht: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 500, height: 600)
+        .frame(width: 540, height: 720)
     }
 
     private func waehleOrdner() {
@@ -141,7 +153,7 @@ final class EinstellungenFenster {
 
     func zeigen() {
         if fenster == nil {
-            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 500, height: 600),
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 720),
                              styleMask: [.titled, .closable],
                              backing: .buffered, defer: false)
             w.title = "Einstellungen"

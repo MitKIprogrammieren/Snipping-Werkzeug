@@ -266,7 +266,7 @@ struct AufnahmeKnoepfe: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Neuer Ausschnitt (⌘N, überall ⌃⇧S)")
+            .help(KuerzelSpeicher.shared.hilfe("Neuer Ausschnitt", .neu))
 
             Picker("", selection: $art) {
                 ForEach(Art.allCases) { a in
@@ -300,6 +300,7 @@ struct AufnahmeKnoepfe: View {
 
 struct AusgabeKnoepfe: View {
     @ObservedObject var zustand: HauptZustand
+    @ObservedObject private var k = KuerzelSpeicher.shared
 
     var body: some View {
         HStack(spacing: 2) {
@@ -307,8 +308,8 @@ struct AusgabeKnoepfe: View {
                 if zustand.video != nil {
                     LeistenKnopf(symbol: "folder", hilfe: "Im Finder zeigen") { zustand.imFinderZeigen() }
                 }
-                LeistenKnopf(symbol: "doc.on.doc", hilfe: "Kopieren (⇧⌘C)") { zustand.kopieren() }
-                LeistenKnopf(symbol: "square.and.arrow.down", hilfe: "Speichern unter … (⌘S)") { zustand.speichern() }
+                LeistenKnopf(symbol: "doc.on.doc", hilfe: k.hilfe("Kopieren", .kopieren)) { zustand.kopieren() }
+                LeistenKnopf(symbol: "square.and.arrow.down", hilfe: k.hilfe("Speichern unter …", .speichern)) { zustand.speichern() }
                 LeistenKnopf(symbol: "square.and.arrow.up", hilfe: "Teilen") { zustand.teilen() }
                 Trenner()
             }
@@ -319,6 +320,14 @@ struct AusgabeKnoepfe: View {
 
 struct LeerAnsicht: View {
     @AppStorage(Schluessel.darstellung) private var darstellung: Darstellung = .windows
+    @ObservedObject private var k = KuerzelSpeicher.shared
+
+    private var hinweis: String {
+        if let t = k.text(.ausschnittGlobal) {
+            return "Drücke \(t) oder klicke auf „Neu“, um einen Ausschnitt oder eine Bildschirmaufnahme zu erstellen."
+        }
+        return "Klicke auf „Neu“, um einen Ausschnitt oder eine Bildschirmaufnahme zu erstellen."
+    }
 
     var body: some View {
         let stil = Stil(darstellung: darstellung)
@@ -328,7 +337,7 @@ struct LeerAnsicht: View {
                 .foregroundStyle(stil.akzent)
             Text("Noch kein Ausschnitt")
                 .font(.title3.weight(.semibold))
-            Text("Drücke ⌃⇧S oder klicke auf „Neu“, um einen Ausschnitt oder eine Bildschirmaufnahme zu erstellen.")
+            Text(hinweis)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: 380)

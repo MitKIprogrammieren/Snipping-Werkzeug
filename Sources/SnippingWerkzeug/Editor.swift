@@ -314,6 +314,7 @@ struct EditorFlaeche: View {
 
 struct BearbeitungsWerkzeuge: View {
     @ObservedObject var m: EditorModell
+    @ObservedObject private var k = KuerzelSpeicher.shared
 
     var body: some View {
         HStack(spacing: 2) {
@@ -326,19 +327,19 @@ struct BearbeitungsWerkzeuge: View {
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
             } else {
-                LeistenKnopf(symbol: "pencil.tip", hilfe: "Kugelschreiber", aktiv: m.werkzeug == .stift) { m.waehle(.stift) }
+                LeistenKnopf(symbol: "pencil.tip", hilfe: k.hilfe("Kugelschreiber", .stift), aktiv: m.werkzeug == .stift) { m.waehle(.stift) }
                 FarbMenue(farbe: $m.stiftFarbe, breite: $m.stiftBreite, breiten: [3, 6, 12])
-                LeistenKnopf(symbol: "highlighter", hilfe: "Textmarker", aktiv: m.werkzeug == .marker) { m.waehle(.marker) }
+                LeistenKnopf(symbol: "highlighter", hilfe: k.hilfe("Textmarker", .marker), aktiv: m.werkzeug == .marker) { m.waehle(.marker) }
                 FarbMenue(farbe: $m.markerFarbe, breite: $m.markerBreite, breiten: [16, 28, 44])
-                LeistenKnopf(symbol: "eraser", hilfe: "Radierer", aktiv: m.werkzeug == .radierer) { m.waehle(.radierer) }
-                LeistenKnopf(symbol: "crop", hilfe: "Zuschneiden") { m.waehle(.zuschneiden) }
+                LeistenKnopf(symbol: "eraser", hilfe: k.hilfe("Radierer", .radierer), aktiv: m.werkzeug == .radierer) { m.waehle(.radierer) }
+                LeistenKnopf(symbol: "crop", hilfe: k.hilfe("Zuschneiden", .zuschneiden)) { m.waehle(.zuschneiden) }
                 Trenner()
-                LeistenKnopf(symbol: "arrow.uturn.backward", hilfe: "Rückgängig (⌘Z)") { m.rueckgaengig() }
+                LeistenKnopf(symbol: "arrow.uturn.backward", hilfe: k.hilfe("Rückgängig", .rueckgaengig)) { m.rueckgaengig() }
                     .opacity(m.kannRueckgaengig ? 1 : 0.35)
-                LeistenKnopf(symbol: "arrow.uturn.forward", hilfe: "Wiederholen (⇧⌘Z)") { m.wiederholen() }
+                LeistenKnopf(symbol: "arrow.uturn.forward", hilfe: k.hilfe("Wiederholen", .wiederholen)) { m.wiederholen() }
                     .opacity(m.kannWiederholen ? 1 : 0.35)
                 Trenner()
-                LeistenKnopf(symbol: "text.viewfinder", hilfe: "Text erkennen und kopieren") {
+                LeistenKnopf(symbol: "text.viewfinder", hilfe: k.hilfe("Text erkennen und kopieren", .texterkennung)) {
                     Task { await m.erkenneText() }
                 }
             }

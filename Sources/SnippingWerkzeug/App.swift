@@ -15,42 +15,70 @@ struct SnippingWerkzeugApp: App {
             EinstellungenAnsicht()
         }
         .commands {
-            CommandGroup(replacing: .newItem) {
-                Button("Neuer Ausschnitt") { AufnahmeSteuerung.shared.neu() }
-                    .keyboardShortcut("n", modifiers: .command)
+            BefehlsMenues()
+        }
+    }
+}
+
+/// Menübefehle – alle Kürzel kommen aus den Einstellungen.
+struct BefehlsMenues: Commands {
+    // Sorgt dafür, dass die Menüs sich neu aufbauen, wenn ein Kürzel geändert wird
+    @AppStorage(KuerzelSpeicher.schluessel) private var kuerzelRoh = ""
+
+    private var k: KuerzelSpeicher {
+        _ = kuerzelRoh
+        return KuerzelSpeicher.shared
+    }
+    private var editor: EditorModell? { Hauptfenster.shared.zustand.editor }
+
+    var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("Neuer Ausschnitt") { AufnahmeSteuerung.shared.neu() }
+                .keyboardShortcut(k.shortcut(.neu))
+        }
+        CommandGroup(replacing: .saveItem) {
+            Button("Speichern unter …") { Hauptfenster.shared.zustand.speichern() }
+                .keyboardShortcut(k.shortcut(.speichern))
+        }
+        CommandGroup(replacing: .undoRedo) {
+            Button("Rückgängig") { editor?.rueckgaengig() }
+                .keyboardShortcut(k.shortcut(.rueckgaengig))
+            Button("Wiederholen") { editor?.wiederholen() }
+                .keyboardShortcut(k.shortcut(.wiederholen))
+        }
+        CommandGroup(after: .pasteboard) {
+            Divider()
+            Button("Ausschnitt kopieren") { Hauptfenster.shared.zustand.kopieren() }
+                .keyboardShortcut(k.shortcut(.kopieren))
+        }
+        CommandMenu("Werkzeuge") {
+            Button("Kugelschreiber") { editor?.waehle(.stift) }
+                .keyboardShortcut(k.shortcut(.stift))
+            Button("Textmarker") { editor?.waehle(.marker) }
+                .keyboardShortcut(k.shortcut(.marker))
+            Button("Radierer") { editor?.waehle(.radierer) }
+                .keyboardShortcut(k.shortcut(.radierer))
+            Button("Zuschneiden") { editor?.waehle(.zuschneiden) }
+                .keyboardShortcut(k.shortcut(.zuschneiden))
+            Divider()
+            Button("Text erkennen") {
+                if let m = editor { Task { await m.erkenneText() } }
             }
-            CommandGroup(replacing: .saveItem) {
-                Button("Speichern unter …") { Hauptfenster.shared.zustand.speichern() }
-                    .keyboardShortcut("s", modifiers: .command)
-            }
-            CommandGroup(replacing: .undoRedo) {
-                Button("Rückgängig") { Hauptfenster.shared.zustand.editor?.rueckgaengig() }
-                    .keyboardShortcut("z", modifiers: .command)
-                Button("Wiederholen") { Hauptfenster.shared.zustand.editor?.wiederholen() }
-                    .keyboardShortcut("z", modifiers: [.command, .shift])
-            }
-            CommandGroup(after: .pasteboard) {
-                Divider()
-                Button("Ausschnitt kopieren") { Hauptfenster.shared.zustand.kopieren() }
-                    .keyboardShortcut("c", modifiers: [.command, .shift])
-            }
+            .keyboardShortcut(k.shortcut(.texterkennung))
         }
     }
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    private var hotKey: HotKey?
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var statusItem: NSStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         Hauptfenster.shared.zeigen()
 
-        // ⌃⇧S – Gegenstück zu Win+Umschalt+S
-        hotKey = HotKey(taste: UInt32(kVK_ANSI_S), modifikatoren: UInt32(controlKey | shiftKey)) {
-            AufnahmeSteuerung.shared.zeigeLeiste()
-        }
+        // Globale Kürzel (Standard ⌃⇧S – Gegenstück zu Win+Umschalt+S)
+        HotKeyVerwaltung.shared.start()
 
         richteStatusMenueEin()
     }
@@ -67,53 +95,41 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func richteStatusMenueEin() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.image = NSImage(systemSymbolName: "scissors", accessibilityDescription: "Snipping Werkzeug")
-
         let menue = NSMenu()
-        func eintrag(_ titel: String, _ aktion: Selector) {
-            let e = NSMenuItem(title: titel, action: aktion, keyEquivalent: "")
+        menue.delegate = self
+        item.menu = menue
+        statusItem = item
+    }
+
+    /// Menü bei jedem Öffnen neu aufbauen, damit die aktuellen Kürzel dranstehen.
+    func menuNeedsUpdate(_ menue: NSMenu) {
+        menue.removeAllItems()
+        let k = KuerzelSpeicher.shared
+        func eintrag(_ titel: String, _ aktion: Selector, _ a: Aktion? = nil) {
+            let text = a.flatMap { k.text($0) }.map { "\(titel)  (\($0))" } ?? titel
+            let e = NSMenuItem(title: text, action: aktion, keyEquivalent: "")
             e.target = self
             menue.addItem(e)
         }
-        eintrag("Neuer Ausschnitt  (⌃⇧S)", #selector(neuerAusschnitt))
-        eintrag("Bildschirmaufnahme beenden", #selector(aufnahmeBeenden))
+        eintrag("Neuer Ausschnitt", #selector(neuerAusschnitt), .ausschnittGlobal)
+        if AufnahmeSteuerung.shared.nimmtAuf {
+            eintrag("Bildschirmaufnahme beenden", #selector(aufnahmeBeenden), .videoGlobal)
+        } else {
+            eintrag("Bildschirmaufnahme", #selector(videoStarten), .videoGlobal)
+        }
+        eintrag("Vollbild aufnehmen", #selector(vollbild), .vollbildGlobal)
         menue.addItem(.separator())
         eintrag("Fenster zeigen", #selector(fensterZeigen))
         eintrag("Einstellungen …", #selector(einstellungenZeigen))
         menue.addItem(.separator())
         eintrag("Snipping Werkzeug beenden", #selector(beenden))
-        item.menu = menue
-        statusItem = item
     }
 
     @objc private func neuerAusschnitt() { AufnahmeSteuerung.shared.zeigeLeiste() }
+    @objc private func videoStarten() { AufnahmeSteuerung.shared.zeigeLeiste(art: .video) }
+    @objc private func vollbild() { AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto) }
     @objc private func aufnahmeBeenden() { AufnahmeSteuerung.shared.stoppeVideo(verwerfen: false) }
     @objc private func fensterZeigen() { Hauptfenster.shared.zeigen() }
     @objc private func einstellungenZeigen() { EinstellungenFenster.shared.zeigen() }
     @objc private func beenden() { NSApp.terminate(nil) }
-}
-
-/// Globales Tastenkürzel über Carbon (braucht keine Bedienungshilfen-Freigabe).
-final class HotKey {
-    private var ref: EventHotKeyRef?
-    private var handlerRef: EventHandlerRef?
-    private let aktion: @MainActor () -> Void
-
-    init(taste: UInt32, modifikatoren: UInt32, aktion: @escaping @MainActor () -> Void) {
-        self.aktion = aktion
-        var typ = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        let selbst = Unmanaged.passUnretained(self).toOpaque()
-        InstallEventHandler(GetApplicationEventTarget(), { _, _, userData in
-            guard let userData else { return OSStatus(eventNotHandledErr) }
-            let hk = Unmanaged<HotKey>.fromOpaque(userData).takeUnretainedValue()
-            MainActor.assumeIsolated { hk.aktion() }
-            return OSStatus(noErr)
-        }, 1, &typ, selbst, &handlerRef)
-        let id = EventHotKeyID(signature: OSType(0x534E_5057), id: 1)
-        RegisterEventHotKey(taste, modifikatoren, id, GetApplicationEventTarget(), 0, &ref)
-    }
-
-    deinit {
-        if let ref { UnregisterEventHotKey(ref) }
-        if let handlerRef { RemoveEventHandler(handlerRef) }
-    }
 }

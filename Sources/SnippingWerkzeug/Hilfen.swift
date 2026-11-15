@@ -2,7 +2,7 @@ import AppKit
 import CoreGraphics
 import ImageIO
 import UniformTypeIdentifiers
-import Vision
+@preconcurrency import Vision
 
 enum Ablage {
     static func kopiere(_ bild: CGImage) {

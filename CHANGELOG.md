@@ -8,6 +8,7 @@
 - Neue globale Kürzel: Bildschirmaufnahme (Standard ⌃⇧R, wie Win+Umschalt+R) und Vollbild sofort aufnehmen (ohne Standard)
 - Neues Menü „Werkzeuge“ mit Kugelschreiber, Textmarker, Radierer, Zuschneiden und Text erkennen – auch diese mit eigenen Kürzeln belegbar
 - Menüleisten-Symbol und Hinweistexte zeigen immer die aktuellen Kürzel
+- Lässt sich jetzt auch nur mit den Command Line Tools bauen (ohne volles Xcode)
 
 ## 0.0.1 – 15.11.2026
 

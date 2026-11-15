@@ -10,8 +10,18 @@ final class HauptZustand: ObservableObject {
         case video(URL)
     }
 
-    @Published var inhalt: Inhalt = .leer
+    @Published var inhalt: Inhalt = .leer {
+        didSet {
+            player.pause()
+            if let v = video {
+                player.replaceCurrentItem(with: AVPlayerItem(url: v))
+            } else {
+                player.replaceCurrentItem(with: nil)
+            }
+        }
+    }
     @Published var meldung = ""
+    let player = AVPlayer()
 
     var editor: EditorModell? {
         if case .bild(let m) = inhalt { return m }
@@ -236,8 +246,8 @@ struct HauptAnsicht: View {
             LeerAnsicht()
         case .bild(let m):
             EditorFlaeche(m: m)
-        case .video(let url):
-            VideoAnsicht(url: url)
+        case .video:
+            VideoPlayer(player: zustand.player)
         }
     }
 }
@@ -381,18 +391,3 @@ struct BildGroesse: View {
     }
 }
 
-struct VideoAnsicht: View {
-    let url: URL
-    @State private var player = AVPlayer()
-
-    var body: some View {
-        VideoPlayer(player: player)
-            .onAppear { lade(url) }
-            .onChange(of: url) { _, neu in lade(neu) }
-            .onDisappear { player.pause() }
-    }
-
-    private func lade(_ u: URL) {
-        player.replaceCurrentItem(with: AVPlayerItem(url: u))
-    }
-}

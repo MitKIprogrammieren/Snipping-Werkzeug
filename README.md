@@ -30,7 +30,7 @@ Fest sind nur esc (abbrechen) und ↩ (bestätigen).
 
 ## Bauen und installieren
 
-Voraussetzung: macOS 15 oder neuer, Xcode 16 oder neuer (bzw. die Command Line Tools).
+Voraussetzung: macOS 15 oder neuer und die Command Line Tools (`xcode-select --install`) – volles Xcode ist nicht nötig.
 
 ```bash
 ./scripts/mac-installieren.sh

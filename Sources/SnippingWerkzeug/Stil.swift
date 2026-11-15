@@ -46,7 +46,6 @@ struct LeistenKnopf: View {
     let aktion: () -> Void
 
     @AppStorage(Schluessel.darstellung) private var darstellung: Darstellung = .windows
-    @State private var hover = false
 
     var body: some View {
         let stil = Stil(darstellung: darstellung)
@@ -55,10 +54,6 @@ struct LeistenKnopf: View {
                 .font(.system(size: stil.istWindows ? 15 : 14))
                 .frame(width: 32, height: stil.knopfHoehe)
                 .foregroundStyle(aktiv ? stil.akzent : Color.primary)
-                .background(
-                    RoundedRectangle(cornerRadius: stil.eckenradius)
-                        .fill(aktiv ? stil.akzent.opacity(0.15) : (hover ? Color.primary.opacity(0.08) : Color.clear))
-                )
                 .overlay(alignment: .bottom) {
                     if stil.istWindows && aktiv {
                         Capsule().fill(stil.akzent).frame(width: 14, height: 3).offset(y: -1)
@@ -66,9 +61,23 @@ struct LeistenKnopf: View {
                 }
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(LeistenKnopfStil(aktiv: aktiv, stil: stil))
         .help(hilfe)
-        .onHover { hover = $0 }
+    }
+}
+
+/// Hintergrund für Leistenknöpfe: hervorgehoben, wenn aktiv, abgedunkelt beim Drücken.
+struct LeistenKnopfStil: ButtonStyle {
+    let aktiv: Bool
+    let stil: Stil
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                RoundedRectangle(cornerRadius: stil.eckenradius)
+                    .fill(aktiv ? stil.akzent.opacity(0.15)
+                          : (configuration.isPressed ? Color.primary.opacity(0.12) : Color.clear))
+            )
     }
 }
 

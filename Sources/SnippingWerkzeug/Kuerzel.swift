@@ -64,7 +64,7 @@ struct Kuerzel: Codable, Equatable, Hashable {
         } else {
             return nil
         }
-        var m: EventModifiers = []
+        var m: SwiftUI.EventModifiers = []
         if flags.contains(.command) { m.insert(.command) }
         if flags.contains(.shift) { m.insert(.shift) }
         if flags.contains(.option) { m.insert(.option) }
@@ -160,6 +160,10 @@ final class KuerzelSpeicher: ObservableObject {
 
     /// Nur Abweichungen vom Standard; ein Eintrag mit nil heißt „bewusst kein Kürzel“.
     @Published private var gespeichert: [String: Kuerzel?] = [:]
+
+    /// Zustand der Aufnahmefelder in den Einstellungen
+    @Published var aufnehmend: Aktion?
+    @Published var fehler: [Aktion: String] = [:]
 
     private init() {
         if let roh = UserDefaults.standard.string(forKey: Self.schluessel),
@@ -310,8 +314,11 @@ final class HotKeyVerwaltung {
 struct KuerzelZeile: View {
     let aktion: Aktion
     @ObservedObject private var speicher = KuerzelSpeicher.shared
-    @State private var aufnehmend = false
-    @State private var fehler: String?
+
+    private var aufnehmend: Bool { speicher.aufnehmend == aktion }
+    private var fehler: String? { speicher.fehler[aktion] }
+
+    private func setzeFehler(_ text: String?) { speicher.fehler[aktion] = text }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 4) {
@@ -319,7 +326,7 @@ struct KuerzelZeile: View {
                 HStack(spacing: 6) {
                     feld
                     Button {
-                        fehler = speicher.setze(nil, fuer: aktion)
+                        setzeFehler(speicher.setze(nil, fuer: aktion))
                     } label: {
                         Image(systemName: "xmark.circle")
                     }
@@ -329,7 +336,7 @@ struct KuerzelZeile: View {
 
                     Button {
                         speicher.zuruecksetzen(aktion)
-                        fehler = nil
+                        setzeFehler(nil)
                     } label: {
                         Image(systemName: "arrow.uturn.backward")
                     }
@@ -361,11 +368,15 @@ struct KuerzelZeile: View {
                               lineWidth: aufnehmend ? 1.5 : 0.5))
             .overlay(
                 KuerzelRecorder(
-                    beiKuerzel: { neu in fehler = speicher.setze(neu, fuer: aktion) },
+                    beiKuerzel: { neu in setzeFehler(speicher.setze(neu, fuer: aktion)) },
                     beiStatus: { an in
-                        aufnehmend = an
-                        if an { fehler = nil }
-                        HotKeyVerwaltung.shared.pausieren(an)
+                        if an {
+                            speicher.aufnehmend = aktion
+                            setzeFehler(nil)
+                        } else if speicher.aufnehmend == aktion {
+                            speicher.aufnehmend = nil
+                        }
+                        HotKeyVerwaltung.shared.pausieren(speicher.aufnehmend != nil)
                     }
                 )
             )

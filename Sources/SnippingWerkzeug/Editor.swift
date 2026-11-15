@@ -392,7 +392,6 @@ struct FarbMenue: View {
 struct TextErgebnisAnsicht: View {
     let text: String
     let schliessen: () -> Void
-    @State private var kopiert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -406,10 +405,9 @@ struct TextErgebnisAnsicht: View {
             .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
             HStack {
                 Spacer()
-                Button(kopiert ? "Kopiert" : "Alles kopieren") {
+                Button("Alles kopieren") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
-                    kopiert = true
                 }
                 Button("Fertig", action: schliessen)
                     .keyboardShortcut(.defaultAction)

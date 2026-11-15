@@ -69,6 +69,10 @@ final class HauptZustand: ObservableObject {
         }
     }
 
+    func anheften() {
+        if let m = editor { AnheftVerwaltung.shared.anheften(m.gerendert()) }
+    }
+
     func imFinderZeigen() {
         if let v = video { NSWorkspace.shared.activateFileViewerSelecting([v]) }
     }
@@ -318,6 +322,9 @@ struct AusgabeKnoepfe: View {
             if zustand.hatInhalt {
                 if zustand.video != nil {
                     LeistenKnopf(symbol: "folder", hilfe: "Im Finder zeigen") { zustand.imFinderZeigen() }
+                }
+                if zustand.editor != nil {
+                    LeistenKnopf(symbol: "pin", hilfe: k.hilfe("Anheften (schwebt im Vordergrund)", .anheften)) { zustand.anheften() }
                 }
                 LeistenKnopf(symbol: "doc.on.doc", hilfe: k.hilfe("Kopieren", .kopieren)) { zustand.kopieren() }
                 LeistenKnopf(symbol: "square.and.arrow.down", hilfe: k.hilfe("Speichern unter …", .speichern)) { zustand.speichern() }

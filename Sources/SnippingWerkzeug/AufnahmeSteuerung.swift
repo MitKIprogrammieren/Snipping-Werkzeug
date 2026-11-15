@@ -19,6 +19,8 @@ final class AufnahmeSteuerung {
     private var hauptWarSichtbar = false
     /// true, wenn über „Neu“ in der App gestartet (dann öffnet sich der Editor direkt, sonst kommt der Hinweis)
     var ausApp = false
+    /// Nach der Aufnahme direkt anheften statt Hinweis/Editor
+    private var anheftenNachAufnahme = false
     private var laeuft = false
     private var artFuerDiesenLauf: Art?
 
@@ -29,6 +31,7 @@ final class AufnahmeSteuerung {
     /// „Neu“ aus Menü oder Werkzeugleiste: Windows startet sofort, Mac zeigt die Leiste.
     func neu() {
         ausApp = true
+        anheftenNachAufnahme = false
         if Stil.aktuell.istWindows {
             starte(modus: Einstellungen.modus)
         } else {
@@ -36,8 +39,9 @@ final class AufnahmeSteuerung {
         }
     }
 
-    func zeigeLeiste(art: Art? = nil) {
+    func zeigeLeiste(art: Art? = nil, anheften: Bool = false) {
         if let art { UserDefaults.standard.set(art.rawValue, forKey: Schluessel.art) }
+        if !laeuft && !nimmtAuf { anheftenNachAufnahme = anheften }
         if nimmtAuf {
             stoppeVideo(verwerfen: false)
             return
@@ -376,7 +380,11 @@ final class AufnahmeSteuerung {
             }
         }
         let meldung = teile.joined(separator: " · ")
-        if ausApp {
+        if anheftenNachAufnahme {
+            anheftenNachAufnahme = false
+            Hauptfenster.shared.zeigeBild(bild, meldung: meldung, anzeigen: false)
+            AnheftVerwaltung.shared.anheften(bild)
+        } else if ausApp {
             // Aus der App gestartet → wie bei Windows direkt im Editor öffnen
             Hauptfenster.shared.zeigeBild(bild, meldung: meldung)
         } else {
@@ -446,6 +454,7 @@ final class AufnahmeSteuerung {
 
     private func abgebrochen() {
         laeuft = false
+        anheftenNachAufnahme = false
         if hauptWarSichtbar { Hauptfenster.shared.zeigen() }
     }
 

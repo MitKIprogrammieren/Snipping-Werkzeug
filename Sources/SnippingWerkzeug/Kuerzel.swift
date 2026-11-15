@@ -104,8 +104,8 @@ struct Kuerzel: Codable, Equatable, Hashable {
 // MARK: - Alle Aktionen mit Kürzel
 
 enum Aktion: String, CaseIterable, Identifiable {
-    case ausschnittGlobal, videoGlobal, vollbildGlobal
-    case neu, kopieren, speichern, rueckgaengig, wiederholen
+    case ausschnittGlobal, videoGlobal, vollbildGlobal, anheftenGlobal, durchklickenGlobal
+    case neu, anheften, kopieren, speichern, rueckgaengig, wiederholen
     case stift, marker, radierer, lineal, zuschneiden, texterkennung
 
     var id: String { rawValue }
@@ -115,6 +115,9 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .ausschnittGlobal: return "Aufnahmeleiste öffnen"
         case .videoGlobal: return "Bildschirmaufnahme (Video)"
         case .vollbildGlobal: return "Vollbild sofort aufnehmen"
+        case .anheftenGlobal: return "Ausschnitt aufnehmen und anheften"
+        case .durchklickenGlobal: return "Angeheftete: Durchklicken ein/aus"
+        case .anheften: return "Ausschnitt anheften"
         case .neu: return "Neuer Ausschnitt"
         case .kopieren: return "Ausschnitt kopieren"
         case .speichern: return "Speichern unter"
@@ -132,7 +135,7 @@ enum Aktion: String, CaseIterable, Identifiable {
     /// Globale Kürzel funktionieren überall, auch wenn die App im Hintergrund ist.
     var global: Bool {
         switch self {
-        case .ausschnittGlobal, .videoGlobal, .vollbildGlobal: return true
+        case .ausschnittGlobal, .videoGlobal, .vollbildGlobal, .anheftenGlobal, .durchklickenGlobal: return true
         default: return false
         }
     }
@@ -141,7 +144,9 @@ enum Aktion: String, CaseIterable, Identifiable {
         switch self {
         case .ausschnittGlobal: return Kuerzel(tastenCode: kVK_ANSI_S, zeichen: "s", flags: [.control, .shift])
         case .videoGlobal: return Kuerzel(tastenCode: kVK_ANSI_R, zeichen: "r", flags: [.control, .shift])
-        case .vollbildGlobal: return nil
+        case .anheftenGlobal: return Kuerzel(tastenCode: kVK_ANSI_A, zeichen: "a", flags: [.control, .shift])
+        case .durchklickenGlobal: return Kuerzel(tastenCode: kVK_ANSI_D, zeichen: "d", flags: [.control, .shift])
+        case .vollbildGlobal, .anheften: return nil
         case .neu: return Kuerzel(tastenCode: kVK_ANSI_N, zeichen: "n", flags: [.command])
         case .kopieren: return Kuerzel(tastenCode: kVK_ANSI_C, zeichen: "c", flags: [.command, .shift])
         case .speichern: return Kuerzel(tastenCode: kVK_ANSI_S, zeichen: "s", flags: [.command])
@@ -303,6 +308,8 @@ final class HotKeyVerwaltung {
         guard let a = aktionen[id] else { return }
         AufnahmeSteuerung.shared.ausApp = false
         switch a {
+        case .anheftenGlobal: AufnahmeSteuerung.shared.zeigeLeiste(art: .foto, anheften: true)
+        case .durchklickenGlobal: AnheftVerwaltung.shared.schalteDurchklicken()
         case .ausschnittGlobal: AufnahmeSteuerung.shared.zeigeLeiste()
         case .videoGlobal: AufnahmeSteuerung.shared.zeigeLeiste(art: .video)
         case .vollbildGlobal: AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto)

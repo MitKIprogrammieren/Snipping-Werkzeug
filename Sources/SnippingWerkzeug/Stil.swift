@@ -232,14 +232,24 @@ struct VisualEffect: NSViewRepresentable {
 
 /// Fläche, mit der man das Fenster verschieben kann (die Titelleiste ist durch eigene Inhalte überdeckt).
 struct FensterZiehFlaeche: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { ZiehView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    var doppelklick: (() -> Void)? = nil
+
+    func makeNSView(context: Context) -> ZiehView {
+        let v = ZiehView()
+        v.doppelklick = doppelklick
+        return v
+    }
+
+    func updateNSView(_ nsView: ZiehView, context: Context) {
+        nsView.doppelklick = doppelklick
+    }
 
     final class ZiehView: NSView {
+        var doppelklick: (() -> Void)?
         override var mouseDownCanMoveWindow: Bool { true }
         override func mouseDown(with event: NSEvent) {
             if event.clickCount == 2 {
-                window?.performZoom(nil)
+                if let doppelklick { doppelklick() } else { window?.performZoom(nil) }
             } else {
                 window?.performDrag(with: event)
             }

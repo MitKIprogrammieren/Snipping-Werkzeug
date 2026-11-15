@@ -20,6 +20,8 @@ Alle Kürzel lassen sich in den Einstellungen ändern oder abschalten. Standard:
 | ⌃⇧S | Aufnahmeleiste öffnen (überall) bzw. laufende Aufnahme beenden |
 | ⌃⇧R | Bildschirmaufnahme (überall) |
 | – | Vollbild sofort aufnehmen (überall) |
+| ⌃⇧A | Ausschnitt aufnehmen und anheften (überall) |
+| ⌃⇧D | Angeheftete Ausschnitte: Durchklicken ein/aus (überall) |
 | ⌘N | Neuer Ausschnitt |
 | ⇧⌘C | Ausschnitt kopieren |
 | ⌘S | Speichern unter |

@@ -58,6 +58,9 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.marker))
             Button("Radierer") { editor?.waehle(.radierer) }
                 .keyboardShortcut(k.shortcut(.radierer))
+            Button("Ausschnitt anheften") { Hauptfenster.shared.zustand.anheften() }
+                .keyboardShortcut(k.shortcut(.anheften))
+            Divider()
             Button("Lineal") { editor?.schalteLineal() }
                 .keyboardShortcut(k.shortcut(.lineal))
             Button("Zuschneiden") { editor?.waehle(.zuschneiden) }
@@ -120,6 +123,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             eintrag("Bildschirmaufnahme", #selector(videoStarten), .videoGlobal)
         }
         eintrag("Vollbild aufnehmen", #selector(vollbild), .vollbildGlobal)
+        eintrag("Aufnehmen und anheften", #selector(aufnehmenUndAnheften), .anheftenGlobal)
+        let anh = AnheftVerwaltung.shared
+        if anh.anzahl > 0 {
+            menue.addItem(.separator())
+            eintrag(anh.irgendwoDurchklicken ? "Angeheftete: Durchklicken beenden" : "Angeheftete: Durchklicken",
+                    #selector(durchklicken), .durchklickenGlobal)
+            eintrag("Alle angehefteten Ausschnitte schließen", #selector(angehefteteSchliessen))
+        }
         menue.addItem(.separator())
         eintrag("Fenster zeigen", #selector(fensterZeigen))
         eintrag("Einstellungen …", #selector(einstellungenZeigen))
@@ -139,6 +150,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         AufnahmeSteuerung.shared.ausApp = false
         AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto)
     }
+    @objc private func aufnehmenUndAnheften() {
+        AufnahmeSteuerung.shared.ausApp = false
+        AufnahmeSteuerung.shared.zeigeLeiste(art: .foto, anheften: true)
+    }
+    @objc private func durchklicken() { AnheftVerwaltung.shared.schalteDurchklicken() }
+    @objc private func angehefteteSchliessen() { AnheftVerwaltung.shared.alleSchliessen() }
     @objc private func aufnahmeBeenden() { AufnahmeSteuerung.shared.stoppeVideo(verwerfen: false) }
     @objc private func fensterZeigen() { Hauptfenster.shared.zeigen() }
     @objc private func einstellungenZeigen() { EinstellungenFenster.shared.zeigen() }

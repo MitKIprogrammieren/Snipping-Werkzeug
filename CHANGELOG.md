@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.5 – 15.11.2026
+
+- Neu: Ausschnitte anheften – schwebende Fenster, die immer im Vordergrund bleiben
+  - Knopf „Anheften“ (Reißnagel) im Editor, Menü Werkzeuge → „Ausschnitt anheften“
+  - Globales Kürzel ⌃⇧A: Ausschnitt aufnehmen und sofort anheften
+  - Deckkraft 20–100 %, Zoom mit Mausrad oder Lupen-Knöpfen, mit der Maus verschieben
+  - Durchklicken: Klicks gehen ans Programm darunter; zurück mit ⌃⇧D oder über das Menüleisten-Symbol (gestrichelter Rand zeigt den Modus)
+  - Doppelklick öffnet den Ausschnitt im Editor, mehrere angeheftete Ausschnitte gleichzeitig möglich
+
 ## 0.0.4 – 15.11.2026
 
 - Neues App-Symbol im Stil des Windows-11-Snipping-Tools (Dock, Titelzeile, Hinweis unten rechts)

@@ -97,6 +97,9 @@ struct WindowsLeiste: View {
             if let m = zustand.editor {
                 RueckgaengigKnoepfe(m: m)
             }
+            if zustand.editor != nil {
+                LeistenKnopf(symbol: "pin", hilfe: k.hilfe("Anheften", .anheften)) { zustand.anheften() }
+            }
             if zustand.hatInhalt {
                 LeistenKnopf(symbol: "square.and.arrow.down", hilfe: k.hilfe("Speichern unter", .speichern)) { zustand.speichern() }
                 LeistenKnopf(symbol: "doc.on.doc", hilfe: k.hilfe("Kopieren", .kopieren)) { zustand.kopieren() }

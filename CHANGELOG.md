@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.4 – 15.11.2026
+
+- Neues App-Symbol im Stil des Windows-11-Snipping-Tools (Dock, Titelzeile, Hinweis unten rechts)
+
 ## 0.0.3 – 15.11.2026
 
 Windows-Darstellung so nah wie möglich am Snipping Tool von Windows 11 (die Mac-Darstellung bleibt wählbar):

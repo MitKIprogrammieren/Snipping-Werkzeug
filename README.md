@@ -35,6 +35,9 @@ Fest sind nur esc (abbrechen) und ↩ (bestätigen).
 
 ## Bauen und installieren
 
+**Am einfachsten:** einmal `./scripts/befehl-einrichten.sh` ausführen. Danach liegt „Snipping Werkzeug aktualisieren“ mit dem App-Logo auf dem Schreibtisch – Doppelklick holt die neueste Version, baut und installiert sie. Scheitert der Bau, liegen die Fehler in `Snipping-Fehler.txt` auf dem Schreibtisch.
+
+
 Voraussetzung: macOS 15 oder neuer und die Command Line Tools (`xcode-select --install`) – volles Xcode ist nicht nötig.
 
 ```bash

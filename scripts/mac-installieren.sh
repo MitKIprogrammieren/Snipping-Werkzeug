@@ -71,3 +71,6 @@ fi
 
 open "/Applications/${APP_NAME}.app"
 echo "✓ Snipping Werkzeug ${VERSION} ist installiert."
+
+# Aktualisieren-Befehl mit App-Logo auf den Schreibtisch legen
+./scripts/befehl-einrichten.sh || true

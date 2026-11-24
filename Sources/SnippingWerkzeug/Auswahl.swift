@@ -39,7 +39,7 @@ final class AuswahlModell: ObservableObject {
 
     var loch: Path? {
         switch modus {
-        case .rechteck:
+        case .rechteck, .scroll:
             guard let r = rechteck else { return nil }
             return Path(r)
         case .freiform:
@@ -63,7 +63,7 @@ final class AuswahlModell: ObservableObject {
 
     func gezogen(start s: CGPoint, aktuell p: CGPoint) {
         switch modus {
-        case .rechteck:
+        case .rechteck, .scroll:
             start = s
             ende = p
         case .freiform:
@@ -78,7 +78,7 @@ final class AuswahlModell: ObservableObject {
 
     func losgelassen(bei p: CGPoint) {
         switch modus {
-        case .rechteck:
+        case .rechteck, .scroll:
             if let r = rechteck, r.width >= 4, r.height >= 4 {
                 fertig(.rechteck(r))
             } else {
@@ -124,7 +124,7 @@ struct AuswahlAnsicht: View {
             }
             .allowsHitTesting(false)
 
-            if m.modus == .rechteck, let r = m.rechteck, r.width > 4 {
+            if m.modus == .rechteck || m.modus == .scroll, let r = m.rechteck, r.width > 4 {
                 Text("\(Int(r.width * m.pixelFaktor)) × \(Int(r.height * m.pixelFaktor))")
                     .font(.system(size: 11, weight: .medium).monospacedDigit())
                     .foregroundStyle(Color.white)

@@ -5,7 +5,7 @@ import CoreGraphics
 // Koordinaten sind immer Bildpixel mit Ursprung oben links (y nach unten).
 
 enum Werkzeug {
-    case keins, stift, marker, radierer, form, text, nummer, verpixeln, zuschneiden
+    case keins, stift, marker, radierer, form, text, nummer, verpixeln, lupe, zuschneiden
 }
 
 enum FormArt: String, CaseIterable, Identifiable {
@@ -273,11 +273,24 @@ struct Nummer {
     }
 }
 
+/// Lupe: ein Kreis im Bild wird vergrößert an anderer Stelle gezeigt
+struct LupeElement {
+    let id = UUID()
+    var quelle: CGPoint        // Mitte des vergrößerten Bereichs
+    var ziel: CGPoint          // Mitte der Lupe
+    var radius: CGFloat        // Radius des Quellkreises
+    var zoom: CGFloat
+    var farbe: Farbe
+
+    var zielRadius: CGFloat { radius * zoom }
+}
+
 enum Element {
     case strich(Strich)
     case form(FormElement)
     case text(TextElement)
     case nummer(Nummer)
+    case lupe(LupeElement)
 
     var id: UUID {
         switch self {
@@ -285,6 +298,7 @@ enum Element {
         case .form(let f): return f.id
         case .text(let t): return t.id
         case .nummer(let n): return n.id
+        case .lupe(let l): return l.id
         }
     }
 
@@ -306,6 +320,9 @@ enum Element {
             }
         case .text(let t):
             return t.rahmen.insetBy(dx: -r, dy: -r).contains(p)
+        case .lupe(let l):
+            return hypot(l.ziel.x - p.x, l.ziel.y - p.y) <= l.zielRadius + r
+                || hypot(l.quelle.x - p.x, l.quelle.y - p.y) <= l.radius + r
         case .nummer(let n):
             if hypot(n.kopf.x - p.x, n.kopf.y - p.y) <= n.radius * (n.form == .etikett ? 2.5 : 1.3) + r { return true }
             if let ziel = n.pfeilZiel, Geometrie.abstand(p, zuStrecke: n.kopf, ziel) <= n.radius * 0.3 + r { return true }
@@ -343,7 +360,8 @@ enum Geometrie {
 /// Zeichnet Elemente in einen CGContext, dessen y-Achse nach unten zeigt
 /// (SwiftUI-Canvas oder das gespiegelte Export-Bild).
 enum Zeichner {
-    static func zeichne(_ e: Element, in cg: CGContext) {
+    /// `bild` ist das Grundbild – die Lupe braucht es, um den vergrößerten Ausschnitt zu zeigen.
+    static func zeichne(_ e: Element, in cg: CGContext, bild: CGImage? = nil) {
         cg.saveGState()
         defer { cg.restoreGState() }
         switch e {
@@ -351,7 +369,57 @@ enum Zeichner {
         case .form(let f): zeichne(f, in: cg)
         case .text(let t): zeichne(t, in: cg)
         case .nummer(let n): zeichne(n, in: cg)
+        case .lupe(let l): zeichne(l, in: cg, bild: bild)
         }
+    }
+
+    private static func zeichne(_ l: LupeElement, in cg: CGContext, bild: CGImage?) {
+        let farbe = l.farbe.nsColor
+        let rq = l.radius, rz = l.zielRadius
+        let quellKreis = CGRect(x: l.quelle.x - rq, y: l.quelle.y - rq, width: rq * 2, height: rq * 2)
+        let zielKreis = CGRect(x: l.ziel.x - rz, y: l.ziel.y - rz, width: rz * 2, height: rz * 2)
+        let dicke = max(2.5, rq * 0.08)
+
+        // Verbindungslinie zwischen den Kreisrändern
+        let dx = l.ziel.x - l.quelle.x, dy = l.ziel.y - l.quelle.y
+        let abstand = hypot(dx, dy)
+        if abstand > rq + rz {
+            let ux = dx / abstand, uy = dy / abstand
+            cg.setStrokeColor(farbe.cgColor)
+            cg.setLineWidth(dicke)
+            cg.move(to: CGPoint(x: l.quelle.x + ux * rq, y: l.quelle.y + uy * rq))
+            cg.addLine(to: CGPoint(x: l.ziel.x - ux * rz, y: l.ziel.y - uy * rz))
+            cg.strokePath()
+        }
+        cg.setStrokeColor(farbe.cgColor)
+        cg.setLineWidth(dicke)
+        cg.strokeEllipse(in: quellKreis)
+
+        // Vergrößerter Inhalt, rund ausgeschnitten
+        cg.saveGState()
+        cg.setShadow(offset: CGSize(width: 0, height: 4), blur: rz * 0.15, color: NSColor.black.withAlphaComponent(0.35).cgColor)
+        cg.setFillColor(NSColor.white.cgColor)
+        cg.fillEllipse(in: zielKreis)
+        cg.restoreGState()
+        if let bild {
+            cg.saveGState()
+            cg.addEllipse(in: zielKreis)
+            cg.clip()
+            cg.interpolationQuality = .high
+            let w = CGFloat(bild.width) * l.zoom, h = CGFloat(bild.height) * l.zoom
+            let rahmen = CGRect(x: l.ziel.x - l.quelle.x * l.zoom, y: l.ziel.y - l.quelle.y * l.zoom, width: w, height: h)
+            // y zeigt nach unten → Bild für die Zeichnung zurückspiegeln
+            cg.translateBy(x: rahmen.minX, y: rahmen.maxY)
+            cg.scaleBy(x: 1, y: -1)
+            cg.draw(bild, in: CGRect(x: 0, y: 0, width: w, height: h))
+            cg.restoreGState()
+        }
+        cg.setStrokeColor(NSColor.white.cgColor)
+        cg.setLineWidth(dicke * 2.2)
+        cg.strokeEllipse(in: zielKreis.insetBy(dx: dicke * 1.1, dy: dicke * 1.1))
+        cg.setStrokeColor(farbe.cgColor)
+        cg.setLineWidth(dicke * 1.4)
+        cg.strokeEllipse(in: zielKreis)
     }
 
     private static func zeichne(_ s: Strich, in cg: CGContext) {

@@ -15,6 +15,10 @@ enum Schluessel {
     static let mikrofon = "mikrofon"
     static let verlauf = "verlauf"
     static let verlaufAnzahl = "verlaufAnzahl"
+    static let meldewerkAdresse = "meldewerkAdresse"
+    static let meldewerkSchluessel = "meldewerkSchluessel"
+    static let klicksZeigen = "klicksZeigen"
+    static let tastenZeigen = "tastenZeigen"
 }
 
 enum Einstellungen {
@@ -39,6 +43,10 @@ enum Einstellungen {
             Schluessel.mikrofon: false,
             Schluessel.verlauf: true,
             Schluessel.verlaufAnzahl: 100,
+            Schluessel.meldewerkAdresse: "http://192.168.1.30:8077",
+            Schluessel.meldewerkSchluessel: "",
+            Schluessel.klicksZeigen: true,
+            Schluessel.tastenZeigen: false,
         ])
     }
 
@@ -53,6 +61,8 @@ enum Einstellungen {
     static var mauszeiger: Bool { d.bool(forKey: Schluessel.mauszeiger) }
     static var systemton: Bool { d.bool(forKey: Schluessel.systemton) }
     static var mikrofon: Bool { d.bool(forKey: Schluessel.mikrofon) }
+    static var klicksZeigen: Bool { d.bool(forKey: Schluessel.klicksZeigen) }
+    static var tastenZeigen: Bool { d.bool(forKey: Schluessel.tastenZeigen) }
     static var ordner: URL {
         URL(fileURLWithPath: d.string(forKey: Schluessel.ordner) ?? standardOrdner, isDirectory: true)
     }
@@ -73,6 +83,11 @@ struct EinstellungenAnsicht: View {
     @AppStorage(Schluessel.mikrofon) private var mikrofon = false
     @AppStorage(Schluessel.verlauf) private var verlauf = true
     @AppStorage(Schluessel.verlaufAnzahl) private var verlaufAnzahl = 100
+    @AppStorage(Schluessel.meldewerkAdresse) private var meldewerkAdresse = "http://192.168.1.30:8077"
+    @AppStorage(Schluessel.meldewerkSchluessel) private var meldewerkSchluessel = ""
+    @AppStorage(Schluessel.klicksZeigen) private var klicksZeigen = true
+    @AppStorage(Schluessel.tastenZeigen) private var tastenZeigen = false
+    @ObservedObject private var test = MeldewerkTest.shared
 
     var body: some View {
         Form {
@@ -118,8 +133,26 @@ struct EinstellungenAnsicht: View {
                 }
             }
 
+            Section {
+                TextField("Adresse", text: $meldewerkAdresse, prompt: Text("http://192.168.1.30:8077"))
+                SecureField("Schlüssel", text: $meldewerkSchluessel, prompt: Text("aus Meldewerk → Einstellungen → Schnittstelle"))
+                HStack {
+                    Text(test.status).font(.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Testnachricht senden") { test.senden() }
+                        .disabled(meldewerkAdresse.isEmpty || meldewerkSchluessel.isEmpty)
+                }
+            } header: {
+                Text("Meldewerk (WhatsApp)")
+            } footer: {
+                Text("Mit dem Papierflieger im Editor geht der Ausschnitt per WhatsApp an dich.")
+            }
+
             Section("Bildschirmaufnahme") {
                 Toggle("Mauszeiger aufnehmen", isOn: $mauszeiger)
+                Toggle("Mausklicks hervorheben", isOn: $klicksZeigen)
+                Toggle("Tastenkürzel einblenden (⌘, ⌃, ⌥ und Sondertasten)", isOn: $tastenZeigen)
+                    .help("Braucht die Freigabe „Bedienungshilfen“. Normale Buchstaben werden nie eingeblendet – Passwörter bleiben also unsichtbar.")
                 Toggle("Systemton aufnehmen", isOn: $systemton)
                 Toggle("Mikrofon aufnehmen", isOn: $mikrofon)
             }
@@ -183,5 +216,23 @@ final class EinstellungenFenster {
         }
         fenster?.makeKeyAndOrderFront(nil)
         NSApp.activate()
+    }
+}
+
+@MainActor
+final class MeldewerkTest: ObservableObject {
+    static let shared = MeldewerkTest()
+    @Published var status = ""
+
+    func senden() {
+        status = "Sende …"
+        Task {
+            do {
+                try await Meldewerk.senden(bild: nil, titel: "Snipping Werkzeug", text: "Testnachricht – Meldewerk ist verbunden.")
+                status = "Angekommen – schau aufs Handy."
+            } catch {
+                status = error.localizedDescription
+            }
+        }
     }
 }

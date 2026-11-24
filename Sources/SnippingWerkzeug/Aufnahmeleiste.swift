@@ -68,13 +68,16 @@ struct AufnahmeleisteAnsicht: View {
         return HStack(spacing: 2) {
             WinArtUmschalter().padding(.trailing, 6)
             ForEach(Modus.allCases) { mo in
-                if art == .foto || mo != .freiform {
+                if art == .foto || mo.fuerVideo {
                     LeistenKnopf(symbol: mo.symbol, hilfe: mo.langName, aktiv: mo == modus) {
                         modus = mo
                         starten(mo)
                     }
                 }
             }
+            Rectangle().fill(stil.linie).frame(width: 1, height: 20).padding(.horizontal, 4)
+            LeistenKnopf(symbol: "eyedropper", hilfe: "Farbpipette") { schliessen(); HilfsSteuerung.shared.starte(.farbe) }
+            LeistenKnopf(symbol: "ruler", hilfe: "Messen") { schliessen(); HilfsSteuerung.shared.starte(.messen) }
             Rectangle().fill(stil.linie).frame(width: 1, height: 20).padding(.horizontal, 4)
             WinVerzoegerungsMenue(mitText: false)
             Rectangle().fill(stil.linie).frame(width: 1, height: 20).padding(.horizontal, 4)
@@ -109,6 +112,11 @@ struct AufnahmeleisteAnsicht: View {
             ForEach(Art.allCases) { a in
                 MacModusKnopf(symbol: a.symbol, titel: a == .foto ? "Foto" : "Video", aktiv: a == art) { art = a }
             }
+
+            Trenner()
+
+            MacModusKnopf(symbol: "eyedropper", titel: "Farbe", aktiv: false) { schliessen(); HilfsSteuerung.shared.starte(.farbe) }
+            MacModusKnopf(symbol: "ruler", titel: "Messen", aktiv: false) { schliessen(); HilfsSteuerung.shared.starte(.messen) }
 
             Trenner()
 

@@ -26,6 +26,8 @@ final class HauptZustand: ObservableObject {
     }
     @Published var meldung = ""
     @Published var kuerztGerade = false
+    /// Längere Arbeit im Hintergrund (z. B. GIF) – wird als Fortschritt angezeigt
+    @Published var arbeit: String?
     let player = AVPlayer()
     weak var playerView: AVPlayerView?
 
@@ -154,6 +156,29 @@ final class HauptZustand: ObservableObject {
             Hauptfenster.shared.zeigeVideo(ziel, meldung: "Gekürzt gespeichert: \(name)")
         } catch {
             Meldung.fehler(error)
+        }
+    }
+
+    @Published var sendetGerade = false
+
+    func anMeldewerk() {
+        guard let m = editor else { return }
+        guard Meldewerk.eingerichtet else {
+            meldung = "Meldewerk zuerst in den Einstellungen einrichten"
+            EinstellungenFenster.shared.zeigen()
+            return
+        }
+        let bild = m.gerendert()
+        sendetGerade = true
+        meldung = "Wird an Meldewerk geschickt …"
+        Task {
+            do {
+                try await Meldewerk.senden(bild: bild, titel: "Ausschnitt", text: "Snipping Werkzeug · \(Meldewerk.zeitText())")
+                meldung = "Per WhatsApp an dich geschickt"
+            } catch {
+                meldung = "Meldewerk: \(error.localizedDescription)"
+            }
+            sendetGerade = false
         }
     }
 
@@ -333,8 +358,8 @@ struct HauptAnsicht: View {
                     return zustand.laden(url)
                 }
                 .overlay {
-                    if zustand.kuerztGerade {
-                        ProgressView("Video wird gekürzt …")
+                    if let text = zustand.arbeit ?? (zustand.kuerztGerade ? "Video wird gekürzt …" : nil) {
+                        ProgressView(text)
                             .padding(20)
                             .background(RoundedRectangle(cornerRadius: 10).fill(.regularMaterial))
                     }
@@ -424,10 +449,13 @@ struct AusgabeKnoepfe: View {
             if zustand.hatInhalt {
                 if zustand.video != nil {
                     LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
+                    LeistenKnopf(symbol: "photo.stack", hilfe: "Als GIF speichern") { zustand.alsGif() }
                     LeistenKnopf(symbol: "folder", hilfe: "Im Finder zeigen") { zustand.imFinderZeigen() }
                 }
                 if zustand.editor != nil {
                     LeistenKnopf(symbol: "pin", hilfe: k.hilfe("Anheften (schwebt im Vordergrund)", .anheften)) { zustand.anheften() }
+                    LeistenKnopf(symbol: zustand.sendetGerade ? "ellipsis" : "paperplane",
+                                 hilfe: k.hilfe("An Meldewerk senden (WhatsApp)", .meldewerk)) { zustand.anMeldewerk() }
                 }
                 LeistenKnopf(symbol: "doc.on.doc", hilfe: k.hilfe("Kopieren", .kopieren)) { zustand.kopieren() }
                 LeistenKnopf(symbol: "square.and.arrow.down", hilfe: k.hilfe("Speichern unter …", .speichern)) { zustand.speichern() }

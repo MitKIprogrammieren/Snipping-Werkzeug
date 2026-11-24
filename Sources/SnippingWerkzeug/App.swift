@@ -37,6 +37,8 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.neu))
             Button("Öffnen …") { Hauptfenster.shared.zustand.oeffnen() }
                 .keyboardShortcut(k.shortcut(.oeffnen))
+            Button("Verlauf durchsuchen …") { VerlaufFenster.shared.zeigen() }
+                .keyboardShortcut(k.shortcut(.verlaufSuchen))
         }
         CommandGroup(replacing: .saveItem) {
             Button("Speichern unter …") { Hauptfenster.shared.zustand.speichern() }
@@ -64,6 +66,10 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.text))
             Button("Nummerierte Marker") { editor?.waehle(.nummer) }
                 .keyboardShortcut(k.shortcut(.nummer))
+            Button("Rahmen und Hintergrund") { editor?.oeffneRahmen() }
+                .keyboardShortcut(k.shortcut(.rahmen))
+            Button("Lupe") { editor?.waehle(.lupe) }
+                .keyboardShortcut(k.shortcut(.lupe))
             Button("Verpixeln") { editor?.waehle(.verpixeln) }
                 .keyboardShortcut(k.shortcut(.verpixeln))
             Button("Automatisch schwärzen") {
@@ -74,6 +80,8 @@ struct BefehlsMenues: Commands {
                 .keyboardShortcut(k.shortcut(.radierer))
             Button("Ausschnitt anheften") { Hauptfenster.shared.zustand.anheften() }
                 .keyboardShortcut(k.shortcut(.anheften))
+            Button("An Meldewerk senden (WhatsApp)") { Hauptfenster.shared.zustand.anMeldewerk() }
+                .keyboardShortcut(k.shortcut(.meldewerk))
             Divider()
             Button("Lineal") { editor?.schalteLineal() }
                 .keyboardShortcut(k.shortcut(.lineal))
@@ -138,6 +146,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         eintrag("Vollbild aufnehmen", #selector(vollbild), .vollbildGlobal)
         eintrag("Aufnehmen und anheften", #selector(aufnehmenUndAnheften), .anheftenGlobal)
+        eintrag("Farbpipette", #selector(farbpipette), .farbeGlobal)
+        eintrag("Messen", #selector(messen), .messenGlobal)
         let anh = AnheftVerwaltung.shared
         if anh.anzahl > 0 {
             menue.addItem(.separator())
@@ -168,6 +178,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         AufnahmeSteuerung.shared.ausApp = false
         AufnahmeSteuerung.shared.zeigeLeiste(art: .foto, anheften: true)
     }
+    @objc private func farbpipette() { HilfsSteuerung.shared.starte(.farbe) }
+    @objc private func messen() { HilfsSteuerung.shared.starte(.messen) }
     @objc private func durchklicken() { AnheftVerwaltung.shared.schalteDurchklicken() }
     @objc private func angehefteteSchliessen() { AnheftVerwaltung.shared.alleSchliessen() }
     @objc private func aufnahmeBeenden() { AufnahmeSteuerung.shared.stoppeVideo(verwerfen: false) }

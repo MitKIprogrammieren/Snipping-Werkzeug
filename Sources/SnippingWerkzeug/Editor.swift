@@ -23,6 +23,7 @@ struct EditorFlaeche: View {
         .background(stil.flaeche)
         .overlay(alignment: .topTrailing) {
             if m.zeigeSchwaerzen { SchwaerzenAnsicht(m: m) }
+            else if m.zeigeRahmen { RahmenAnsichtPanel(m: m) }
         }
         .overlay {
             if m.erkenntGerade {
@@ -44,11 +45,12 @@ struct EditorFlaeche: View {
                 let bearbeitet = m.bearbeiteterText
                 let elemente = m.elemente
                 let aktuell = m.aktuell
+                let grundbild = m.bild
                 ctx.withCGContext { cg in
                     for e in elemente where e.id != bearbeitet {
-                        Zeichner.zeichne(e, in: cg)
+                        Zeichner.zeichne(e, in: cg, bild: grundbild)
                     }
-                    if let a = aktuell { Zeichner.zeichne(a, in: cg) }
+                    if let a = aktuell { Zeichner.zeichne(a, in: cg, bild: grundbild) }
                 }
                 if let r = m.verpixelnRahmen {
                     ctx.fill(Path(r), with: .color(Color.black.opacity(0.25)))
@@ -234,6 +236,8 @@ struct BearbeitungsWerkzeuge: View {
                 OptionenKnopf(kennung: "text", farbe: m.textFarbe) { textMenue }
                 LeistenKnopf(symbol: "1.circle", hilfe: k.hilfe("Nummerierte Marker", .nummer), aktiv: m.werkzeug == .nummer) { m.waehle(.nummer) }
                 OptionenKnopf(kennung: "nummer", farbe: m.nummerFarbe) { nummerMenue }
+                LeistenKnopf(symbol: "magnifyingglass.circle", hilfe: k.hilfe("Lupe – Stelle anklicken, mit gedrückter Maus Lupe platzieren", .lupe), aktiv: m.werkzeug == .lupe) { m.waehle(.lupe) }
+                OptionenKnopf(kennung: "lupe", farbe: m.lupeFarbe) { lupeMenue }
                 LeistenKnopf(symbol: m.verpixelnArt.symbol, hilfe: k.hilfe(m.verpixelnArt.name, .verpixeln), aktiv: m.werkzeug == .verpixeln) { m.waehle(.verpixeln) }
                 OptionenKnopf(kennung: "verpixeln", farbe: nil) { verpixelnMenue }
                 LeistenKnopf(symbol: "eye.slash", hilfe: k.hilfe("Automatisch schwärzen (IP, E-Mail, Passwörter …)", .schwaerzen),
@@ -243,6 +247,7 @@ struct BearbeitungsWerkzeuge: View {
                 LeistenKnopf(symbol: "eraser", hilfe: k.hilfe("Radierer", .radierer), aktiv: m.werkzeug == .radierer) { m.waehle(.radierer) }
                 LeistenKnopf(symbol: "ruler", hilfe: k.hilfe("Lineal (mit dem Mausrad drehen)", .lineal), aktiv: m.lineal != nil) { m.schalteLineal() }
                 LeistenKnopf(symbol: "crop", hilfe: k.hilfe("Zuschneiden", .zuschneiden)) { m.waehle(.zuschneiden) }
+                LeistenKnopf(symbol: "photo.artframe", hilfe: k.hilfe("Rahmen und Hintergrund", .rahmen), aktiv: m.zeigeRahmen) { m.oeffneRahmen() }
                 LeistenKnopf(symbol: "text.viewfinder", hilfe: k.hilfe("Textaktionen (Text und QR-Codes)", .texterkennung)) {
                     Task { await m.erkenneText() }
                 }
@@ -374,6 +379,23 @@ struct BearbeitungsWerkzeuge: View {
         }
         e.append(.trenner)
         e.append(.ueberschrift("Tipp: Mit gedrückter Maus ziehen = Pfeil vom Marker"))
+        return e
+    }
+
+    private var lupeMenue: [Klappmenue.Eintrag] {
+        let m = self.m
+        var e: [Klappmenue.Eintrag] = [.ueberschrift("Vergrößerung")]
+        for z in [CGFloat(2), 2.5, 3, 4] {
+            e.append(.init(titel: String(format: "%.1f×", Double(z)).replacingOccurrences(of: ".0", with: "").replacingOccurrences(of: ".", with: ","),
+                           an: abs(z - m.lupeZoom) < 0.01) { m.lupeZoom = z })
+        }
+        e.append(.trenner)
+        e.append(.ueberschrift("Größe"))
+        for (name, wert) in [("Klein", CGFloat(0.7)), ("Mittel", 1), ("Groß", 1.4)] {
+            e.append(.init(titel: name, an: abs(wert - m.lupeGroesse) < 0.01) { m.lupeGroesse = wert })
+        }
+        e.append(.trenner)
+        e += farben(m.lupeFarbe) { m.lupeFarbe = $0 }
         return e
     }
 

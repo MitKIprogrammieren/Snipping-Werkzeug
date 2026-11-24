@@ -29,7 +29,7 @@ struct Lineal {
 }
 
 private enum Geste {
-    case nichts, zeichnen, form, verpixeln, lineal(versatz: CGPoint), radieren, zuschneiden, nummer(UUID)
+    case nichts, zeichnen, form, verpixeln, lineal(versatz: CGPoint), radieren, zuschneiden, nummer(UUID), lupe(UUID)
 }
 
 /// Werkzeug-Einstellungen, die über Ausschnitte hinweg erhalten bleiben
@@ -83,6 +83,9 @@ final class EditorModell: ObservableObject {
     @Published var textFamilie: String? = Merker.text("textFamilie") { didSet { Merker.setze("textFamilie", textFamilie ?? "") } }
     @Published var nummerFamilie: String? = Merker.text("nummerFamilie") { didSet { Merker.setze("nummerFamilie", nummerFamilie ?? "") } }
     @Published var nummerGroesse: CGFloat = CGFloat(Merker.zahl("nummerGroesse", 1)) { didSet { Merker.setze("nummerGroesse", Double(nummerGroesse)) } }
+    @Published var lupeZoom: CGFloat = CGFloat(Merker.zahl("lupeZoom", 2.5)) { didSet { Merker.setze("lupeZoom", Double(lupeZoom)) } }
+    @Published var lupeGroesse: CGFloat = CGFloat(Merker.zahl("lupeGroesse", 1)) { didSet { Merker.setze("lupeGroesse", Double(lupeGroesse)) } }
+    @Published var lupeFarbe: Farbe = Merker.wert("lupeFarbe", Farbe.blau) { didSet { Merker.setze("lupeFarbe", lupeFarbe.rawValue) } }
     /// Womit die Zählung im leeren Bild beginnt
     @Published var nummerStart = 1
     @Published var verpixelnArt: VerpixelnArt = .pixel
@@ -97,6 +100,11 @@ final class EditorModell: ObservableObject {
     @Published var erkannterText = ""
     @Published var erkannteCodes: [String] = []
     @Published var erkenntGerade = false
+
+    // Rahmen und Hintergrund
+    @Published var zeigeRahmen = false
+    @Published var rahmen = RahmenOptionen()
+    @Published var rahmenVorschau: NSImage?
 
     // Automatisch schwärzen
     @Published var zeigeSchwaerzen = false
@@ -148,6 +156,11 @@ final class EditorModell: ObservableObject {
             verpixelnRahmen = Self.rechteck(start, p).intersection(CGRect(origin: .zero, size: groesse))
         case .lineal(let v):
             lineal?.mitte = CGPoint(x: p.x + v.x, y: p.y + v.y)
+        case .lupe(let id):
+            if let i = elemente.firstIndex(where: { $0.id == id }), case .lupe(var l) = elemente[i] {
+                l.ziel = hypot(p.x - l.quelle.x, p.y - l.quelle.y) > l.radius * 1.5 ? p : standardZiel(l)
+                elemente[i] = .lupe(l)
+            }
         case .nummer(let id):
             if let i = elemente.firstIndex(where: { $0.id == id }), case .nummer(var n) = elemente[i] {
                 let weit = hypot(p.x - n.kopf.x, p.y - n.kopf.y) > n.radius * 1.6
@@ -234,6 +247,13 @@ final class EditorModell: ObservableObject {
             geste = .nichts
         case .nummer:
             geste = .nummer(setzeNummer(bei: start))
+        case .lupe:
+            let radius = min(max(min(groesse.width, groesse.height) * 0.06, 24), 120) * lupeGroesse
+            var l = LupeElement(quelle: start, ziel: start, radius: radius, zoom: lupeZoom, farbe: lupeFarbe)
+            l.ziel = standardZiel(l)
+            merkeUndo()
+            elemente.append(.lupe(l))
+            geste = .lupe(l.id)
         default:
             geste = .nichts
         }
@@ -297,6 +317,19 @@ final class EditorModell: ObservableObject {
     }
 
     // MARK: Nummerierte Marker
+
+    /// Lupe schräg oben rechts neben die Stelle setzen – und im Bild halten
+    private func standardZiel(_ l: LupeElement) -> CGPoint {
+        let rz = l.zielRadius
+        let versatz = l.radius + rz * 1.25
+        var x = l.quelle.x + versatz
+        var y = l.quelle.y - versatz
+        if x + rz > groesse.width { x = l.quelle.x - versatz }
+        if y - rz < 0 { y = l.quelle.y + versatz }
+        x = min(max(x, rz), max(rz, groesse.width - rz))
+        y = min(max(y, rz), max(rz, groesse.height - rz))
+        return CGPoint(x: x, y: y)
+    }
 
     var naechsteNummer: Int {
         let hoechste = elemente.compactMap { e -> Int? in
@@ -433,6 +466,13 @@ final class EditorModell: ObservableObject {
         bild = neu
     }
 
+    /// Ersetzt Grundbild und entfernt die (bereits eingerechneten) Zeichnungen – mit Rückgängig-Schritt
+    func ersetzeBildUndElemente(_ neu: CGImage) {
+        merkeUndo()
+        bild = neu
+        elemente = []
+    }
+
     // MARK: Rückgängig
 
     private func merkeUndo() {
@@ -471,7 +511,7 @@ final class EditorModell: ObservableObject {
         // Elemente sind oben-links-basiert → Koordinaten spiegeln
         ctx.translateBy(x: 0, y: CGFloat(h))
         ctx.scaleBy(x: 1, y: -1)
-        for e in elemente { Zeichner.zeichne(e, in: ctx) }
+        for e in elemente { Zeichner.zeichne(e, in: ctx, bild: bild) }
         return ctx.makeImage() ?? bild
     }
 

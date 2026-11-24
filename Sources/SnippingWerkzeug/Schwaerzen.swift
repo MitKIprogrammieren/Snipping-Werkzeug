@@ -103,6 +103,7 @@ enum Schwaerzer {
 extension EditorModell {
     func sucheSensibleDaten() async {
         beendeTextBearbeitung()
+        zeigeRahmen = false
         erkenntGerade = true
         let funde = await Schwaerzer.finde(in: gerendert())
         erkenntGerade = false

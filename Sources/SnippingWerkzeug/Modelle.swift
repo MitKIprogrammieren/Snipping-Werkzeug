@@ -15,14 +15,18 @@ enum Art: String, CaseIterable, Identifiable {
 }
 
 enum Modus: String, CaseIterable, Identifiable {
-    case rechteck, freiform, fenster, vollbild
+    case rechteck, freiform, fenster, vollbild, scroll
     var id: String { rawValue }
+
+    /// Für Videos gibt es weder Freihand noch Scrollaufnahme
+    var fuerVideo: Bool { self != .freiform && self != .scroll }
     var name: String {
         switch self {
         case .rechteck: return "Rechteck"
         case .freiform: return "Freihand"
         case .fenster: return "Fenster"
         case .vollbild: return "Vollbild"
+        case .scroll: return "Scrollen"
         }
     }
     var langName: String {
@@ -31,6 +35,7 @@ enum Modus: String, CaseIterable, Identifiable {
         case .freiform: return "Freihandausschnitt"
         case .fenster: return "Fensterausschnitt"
         case .vollbild: return "Vollbildausschnitt"
+        case .scroll: return "Scrollaufnahme (langes Bild)"
         }
     }
     var symbol: String {
@@ -39,6 +44,7 @@ enum Modus: String, CaseIterable, Identifiable {
         case .freiform: return "lasso"
         case .fenster: return "macwindow"
         case .vollbild: return "display"
+        case .scroll: return "scroll"
         }
     }
 }

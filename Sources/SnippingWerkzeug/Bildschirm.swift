@@ -81,6 +81,7 @@ enum Bildschirm {
         k.capturesAudio = Einstellungen.systemton
         k.excludesCurrentProcessAudio = true
         k.captureMicrophone = Einstellungen.mikrofon
+        k.showMouseClicks = Einstellungen.klicksZeigen
         return k
     }
 

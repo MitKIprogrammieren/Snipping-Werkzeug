@@ -99,6 +99,7 @@ struct WindowsLeiste: View {
                 }
                 if zustand.video != nil {
                     LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
+                    LeistenKnopf(symbol: "photo.stack", hilfe: "Als GIF speichern") { zustand.alsGif() }
                 }
             }
 
@@ -109,6 +110,8 @@ struct WindowsLeiste: View {
             }
             if zustand.editor != nil {
                 LeistenKnopf(symbol: "pin", hilfe: k.hilfe("Anheften", .anheften)) { zustand.anheften() }
+                LeistenKnopf(symbol: zustand.sendetGerade ? "ellipsis" : "paperplane",
+                             hilfe: k.hilfe("An Meldewerk senden (WhatsApp)", .meldewerk)) { zustand.anMeldewerk() }
             }
             if zustand.hatInhalt {
                 LeistenKnopf(symbol: "square.and.arrow.down", hilfe: k.hilfe("Speichern unter", .speichern)) { zustand.speichern() }

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0 – 24.11.2026
+
+- **Scrollaufnahme:** neuer Modus „Scrollen“ in der Aufnahmeleiste – Bereich wählen, langsam scrollen, „Fertig“; die App setzt alles zu einem langen Bild zusammen (bis 40.000 px)
+- **Verlauf durchsuchen (⌘F):** eigenes Fenster mit allen Ausschnitten als Raster und Suchfeld; der Text jedes Ausschnitts wird im Hintergrund erkannt, auch nachträglich für ältere; Doppelklick öffnet, Rechtsklick für Kopieren, Finder, Löschen
+- **Rahmen und Hintergrund:** Farbverläufe, Abstand, runde Ecken, Schatten und Fensterleiste mit drei Punkten – mit Live-Vorschau
+- **Lupe:** Stelle anklicken, mit gedrückter Maus die vergrößerte Ansicht platzieren; 2×–4×, drei Größen, Farbe wählbar
+- **Farbpipette und Messen:** neue Knöpfe in der Aufnahmeleiste (auch als Menüleisten-Eintrag und globales Kürzel) – Farbe als Hex-Code kopieren, Abstände in Pixeln messen (⇧ = waagerecht/senkrecht)
+- **Videos:** Mausklicks werden hervorgehoben; optional Tastenkürzel einblenden (nur Kürzel und Sondertasten, nie normale Buchstaben); Aufnahmen als GIF speichern
+- **An Meldewerk senden:** Papierflieger im Editor schickt den Ausschnitt per WhatsApp an dich; Adresse und Schlüssel in den Einstellungen, mit Testnachricht
+
 ## 0.0.12 – 24.11.2026
 
 - Verlauf: Anzahl einstellbar (30, 100, 500 oder unbegrenzt, Standard jetzt 100 statt 30)

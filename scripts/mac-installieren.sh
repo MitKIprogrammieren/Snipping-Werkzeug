@@ -47,6 +47,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSPrincipalClass</key><string>NSApplication</string>
+  <key>NSLocalNetworkUsageDescription</key><string>Das Snipping Werkzeug schickt Ausschnitte auf Wunsch an dein Meldewerk im Heimnetz.</string>
+  <key>NSAppTransportSecurity</key><dict><key>NSAllowsArbitraryLoads</key><true/><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>NSMicrophoneUsageDescription</key><string>Das Snipping Werkzeug nimmt bei Bildschirmaufnahmen auf Wunsch das Mikrofon mit auf.</string>
 </dict>
 </plist>

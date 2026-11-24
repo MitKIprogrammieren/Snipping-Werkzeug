@@ -27,6 +27,11 @@ enum Verlauf {
             let url = ordner.appendingPathComponent("\(f.string(from: Date())).png")
             try Speicher.schreibe(bild, nach: url)
             aufraeumen()
+            // Text für die Suche gleich im Hintergrund erkennen
+            Task.detached(priority: .utility) {
+                let text = await Texterkennung.erkenne(bild)
+                try? text.write(to: textDatei(url), atomically: true, encoding: .utf8)
+            }
         } catch {
             // Verlauf ist nur ein Komfort – Fehler hier nicht melden
         }
@@ -46,20 +51,29 @@ enum Verlauf {
             .sorted { $0.datum > $1.datum }
     }
 
+    /// Erkannter Text liegt als .txt neben dem Bild
+    static func textDatei(_ url: URL) -> URL {
+        url.deletingPathExtension().appendingPathExtension("txt")
+    }
+
+    static func loesche(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
+        try? FileManager.default.removeItem(at: textDatei(url))
+    }
+
     static func lade(_ url: URL) -> CGImage? {
         guard let quelle = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(quelle, 0, nil)
     }
 
-    static func vorschau(_ url: URL) -> NSImage? {
+    static func vorschau(_ url: URL, ziel: NSSize = NSSize(width: 64, height: 40), pixel: Int = 160) -> NSImage? {
         let optionen: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceThumbnailMaxPixelSize: 160,
+            kCGImageSourceThumbnailMaxPixelSize: pixel,
         ]
         guard let quelle = CGImageSourceCreateWithURL(url as CFURL, nil),
               let mini = CGImageSourceCreateThumbnailAtIndex(quelle, 0, optionen as CFDictionary) else { return nil }
-        // In ein festes 64×40-Feld einpassen, damit das Menü ordentlich aussieht
-        let ziel = NSSize(width: 64, height: 40)
+        // In ein festes Feld einpassen, damit Menü und Raster ordentlich aussehen
         return NSImage(size: ziel, flipped: false) { r in
             let w = CGFloat(mini.width), h = CGFloat(mini.height)
             let s = min(r.width / w, r.height / h)
@@ -80,7 +94,7 @@ enum Verlauf {
         let alle = eintraege()
         guard maximal > 0, alle.count > maximal else { return }
         for e in alle.dropFirst(maximal) {
-            try? FileManager.default.removeItem(at: e.url)
+            loesche(e.url)
         }
     }
 
@@ -93,7 +107,10 @@ enum Verlauf {
         f.timeStyle = .short
         f.doesRelativeDateFormatting = true
 
-        var e: [Klappmenue.Eintrag] = []
+        var e: [Klappmenue.Eintrag] = [
+            .init(titel: "Verlauf durchsuchen …", symbol: "magnifyingglass") { VerlaufFenster.shared.zeigen() },
+            .trenner,
+        ]
         let liste = eintraege()
         if !aktiv {
             e.append(.ueberschrift("Verlauf ist in den Einstellungen ausgeschaltet"))

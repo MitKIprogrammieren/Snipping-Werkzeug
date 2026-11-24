@@ -123,7 +123,7 @@ final class AufnahmeSteuerung {
                 }
             }
             // Videos gibt es nur als Rechteck, Fenster oder Vollbild
-            let m: Modus = (art == .video && modus == .freiform) ? .rechteck : modus
+            let m: Modus = (art == .video && !modus.fuerVideo) ? .rechteck : modus
             zeigeAuswahl(modus: m, art: art, inhalt: inhalt, bilder: bilder)
         } catch {
             abgebrochen()
@@ -182,7 +182,7 @@ final class AufnahmeSteuerung {
             let modell = AuswahlModell(modus: modus, bild: bild, fenster: lokal,
                                        pixelFaktor: faktor, abdunkeln: abdunkeln)
             modell.fertig = { [weak self] ergebnis in
-                self?.auswahlFertig(ergebnis, art: art, screen: screen, display: display, bild: bild, inhalt: inhalt)
+                self?.auswahlFertig(ergebnis, art: art, modus: modus, screen: screen, display: display, bild: bild, inhalt: inhalt)
             }
             let fenster = AuswahlFenster.erstelle(fuer: screen)
             fenster.contentView = NSHostingView(rootView: AuswahlAnsicht(m: modell))
@@ -228,9 +228,18 @@ final class AufnahmeSteuerung {
         NSCursor.arrow.set()
     }
 
-    private func auswahlFertig(_ ergebnis: AuswahlErgebnis, art: Art, screen: NSScreen,
+    private func auswahlFertig(_ ergebnis: AuswahlErgebnis, art: Art, modus: Modus, screen: NSScreen,
                                display: SCDisplay, bild: CGImage?, inhalt: SCShareableContent) {
         schliesseAuswahl()
+
+        if art == .foto, modus == .scroll, case .rechteck(let r) = ergebnis {
+            ScrollAufnahme.starte(bereich: r, screen: screen, display: display, inhalt: inhalt) { [weak self] ergebnis in
+                guard let self else { return }
+                self.laeuft = false
+                if let ergebnis { self.fertigBild(ergebnis) } else { self.abgebrochen() }
+            }
+            return
+        }
 
         if art == .foto, let bild {
             let f = CGFloat(bild.width) / screen.frame.width
@@ -275,7 +284,7 @@ final class AufnahmeSteuerung {
         let k = Bildschirm.videoKonfiguration()
         k.width = Bildschirm.gerade(CGFloat(display.width) * screen.backingScaleFactor)
         k.height = Bildschirm.gerade(CGFloat(display.height) * screen.backingScaleFactor)
-        starteVideo(filter: filter, konfig: k, rahmen: nil, screen: screen)
+        starteVideo(filter: filter, konfig: k, rahmen: nil, screen: screen, display: display, tastenBereich: screen.frame)
     }
 
     private func starteVideoBereich(_ r: CGRect, screen: NSScreen, display: SCDisplay, inhalt: SCShareableContent) {
@@ -286,7 +295,7 @@ final class AufnahmeSteuerung {
         k.height = Bildschirm.gerade(r.height * screen.backingScaleFactor)
         let global = CGRect(x: screen.frame.minX + r.minX, y: screen.frame.maxY - r.maxY,
                             width: r.width, height: r.height)
-        starteVideo(filter: filter, konfig: k, rahmen: global, screen: screen)
+        starteVideo(filter: filter, konfig: k, rahmen: global, screen: screen, display: display, tastenBereich: global)
     }
 
     private func starteVideoFenster(_ w: SCWindow, screen: NSScreen) {
@@ -300,13 +309,24 @@ final class AufnahmeSteuerung {
         starteVideo(filter: filter, konfig: k, rahmen: global, screen: screen)
     }
 
-    private func starteVideo(filter: SCContentFilter, konfig: SCStreamConfiguration, rahmen: CGRect?, screen: NSScreen) {
+    private func starteVideo(filter: SCContentFilter, konfig: SCStreamConfiguration, rahmen: CGRect?, screen: NSScreen,
+                             display: SCDisplay? = nil, tastenBereich: CGRect? = nil) {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("Aufnahme-\(UUID().uuidString).mp4")
         let neu = Videoaufnahme(url: url)
         aufnahme = neu
         Task {
             do {
+                var filter = filter
+                // Eingeblendete Tasten sollen mit aufs Video – alle anderen eigenen Fenster nicht
+                if Einstellungen.tastenZeigen, let display, let bereich = tastenBereich,
+                   TastenEinblendung.shared.starte(ueber: bereich) {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    if let inhalt = try? await Bildschirm.inhalt(),
+                       let w = inhalt.windows.first(where: { Int($0.windowID) == TastenEinblendung.shared.fensterNummer }) {
+                        filter = SCContentFilter(display: display, excludingApplications: Bildschirm.eigeneApp(inhalt), exceptingWindows: [w])
+                    }
+                }
                 try await neu.starte(filter: filter, konfig: konfig)
                 laeuft = false
                 zeigeSteuerung(rahmen: rahmen, screen: screen)
@@ -347,6 +367,7 @@ final class AufnahmeSteuerung {
 
     func stoppeVideo(verwerfen: Bool) {
         guard let a = aufnahme else { return }
+        TastenEinblendung.shared.beende()
         steuerPanel?.orderOut(nil)
         steuerPanel = nil
         rahmenFenster?.orderOut(nil)

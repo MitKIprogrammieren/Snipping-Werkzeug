@@ -104,9 +104,9 @@ struct Kuerzel: Codable, Equatable, Hashable {
 // MARK: - Alle Aktionen mit Kürzel
 
 enum Aktion: String, CaseIterable, Identifiable {
-    case ausschnittGlobal, videoGlobal, vollbildGlobal, anheftenGlobal, durchklickenGlobal
-    case neu, oeffnen, anheften, kopieren, speichern, rueckgaengig, wiederholen
-    case stift, marker, form, text, nummer, verpixeln, schwaerzen, radierer, lineal, zuschneiden, texterkennung
+    case ausschnittGlobal, videoGlobal, vollbildGlobal, anheftenGlobal, durchklickenGlobal, farbeGlobal, messenGlobal
+    case neu, oeffnen, verlaufSuchen, anheften, meldewerk, kopieren, speichern, rueckgaengig, wiederholen
+    case stift, marker, form, text, nummer, lupe, verpixeln, schwaerzen, rahmen, radierer, lineal, zuschneiden, texterkennung
 
     var id: String { rawValue }
 
@@ -116,14 +116,20 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .videoGlobal: return "Bildschirmaufnahme (Video)"
         case .vollbildGlobal: return "Vollbild sofort aufnehmen"
         case .anheftenGlobal: return "Ausschnitt aufnehmen und anheften"
+        case .farbeGlobal: return "Farbpipette"
+        case .messenGlobal: return "Messen"
         case .durchklickenGlobal: return "Angeheftete: Durchklicken ein/aus"
         case .anheften: return "Ausschnitt anheften"
         case .neu: return "Neuer Ausschnitt"
         case .oeffnen: return "Datei öffnen"
+        case .meldewerk: return "An Meldewerk senden"
+        case .verlaufSuchen: return "Verlauf durchsuchen"
         case .form: return "Formen"
         case .text: return "Text"
         case .nummer: return "Nummerierte Marker"
         case .verpixeln: return "Verpixeln"
+        case .lupe: return "Lupe"
+        case .rahmen: return "Rahmen und Hintergrund"
         case .schwaerzen: return "Automatisch schwärzen"
         case .kopieren: return "Ausschnitt kopieren"
         case .speichern: return "Speichern unter"
@@ -141,7 +147,7 @@ enum Aktion: String, CaseIterable, Identifiable {
     /// Globale Kürzel funktionieren überall, auch wenn die App im Hintergrund ist.
     var global: Bool {
         switch self {
-        case .ausschnittGlobal, .videoGlobal, .vollbildGlobal, .anheftenGlobal, .durchklickenGlobal: return true
+        case .ausschnittGlobal, .videoGlobal, .vollbildGlobal, .anheftenGlobal, .durchklickenGlobal, .farbeGlobal, .messenGlobal: return true
         default: return false
         }
     }
@@ -152,14 +158,15 @@ enum Aktion: String, CaseIterable, Identifiable {
         case .videoGlobal: return Kuerzel(tastenCode: kVK_ANSI_R, zeichen: "r", flags: [.control, .shift])
         case .anheftenGlobal: return Kuerzel(tastenCode: kVK_ANSI_A, zeichen: "a", flags: [.control, .shift])
         case .durchklickenGlobal: return Kuerzel(tastenCode: kVK_ANSI_D, zeichen: "d", flags: [.control, .shift])
-        case .vollbildGlobal, .anheften: return nil
+        case .vollbildGlobal, .anheften, .meldewerk, .farbeGlobal, .messenGlobal: return nil
         case .neu: return Kuerzel(tastenCode: kVK_ANSI_N, zeichen: "n", flags: [.command])
         case .kopieren: return Kuerzel(tastenCode: kVK_ANSI_C, zeichen: "c", flags: [.command, .shift])
         case .speichern: return Kuerzel(tastenCode: kVK_ANSI_S, zeichen: "s", flags: [.command])
         case .rueckgaengig: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command])
         case .wiederholen: return Kuerzel(tastenCode: kVK_ANSI_Z, zeichen: "z", flags: [.command, .shift])
         case .oeffnen: return Kuerzel(tastenCode: kVK_ANSI_O, zeichen: "o", flags: [.command])
-        case .stift, .marker, .form, .text, .nummer, .verpixeln, .schwaerzen, .radierer, .lineal, .zuschneiden, .texterkennung: return nil
+        case .verlaufSuchen: return Kuerzel(tastenCode: kVK_ANSI_F, zeichen: "f", flags: [.command])
+        case .stift, .marker, .form, .text, .nummer, .lupe, .verpixeln, .schwaerzen, .rahmen, .radierer, .lineal, .zuschneiden, .texterkennung: return nil
         }
     }
 }
@@ -317,6 +324,8 @@ final class HotKeyVerwaltung {
         switch a {
         case .anheftenGlobal: AufnahmeSteuerung.shared.zeigeLeiste(art: .foto, anheften: true)
         case .durchklickenGlobal: AnheftVerwaltung.shared.schalteDurchklicken()
+        case .farbeGlobal: HilfsSteuerung.shared.starte(.farbe)
+        case .messenGlobal: HilfsSteuerung.shared.starte(.messen)
         case .ausschnittGlobal: AufnahmeSteuerung.shared.zeigeLeiste()
         case .videoGlobal: AufnahmeSteuerung.shared.zeigeLeiste(art: .video)
         case .vollbildGlobal: AufnahmeSteuerung.shared.starte(modus: .vollbild, art: .foto)

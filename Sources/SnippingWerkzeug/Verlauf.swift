@@ -3,7 +3,12 @@ import ImageIO
 
 /// Die letzten Ausschnitte – bleiben auch nach einem Neustart erhalten.
 enum Verlauf {
-    static let maximal = 30
+    /// Wie viele Ausschnitte aufgehoben werden (0 = unbegrenzt), einstellbar in den Einstellungen
+    static var maximal: Int { UserDefaults.standard.integer(forKey: Schluessel.verlaufAnzahl) }
+    static let optionen = [30, 100, 500, 0]
+    static func name(_ n: Int) -> String { n == 0 ? "Unbegrenzt" : "\(n) Ausschnitte" }
+    /// So viele zeigt das Menü direkt an
+    static let imMenue = 40
 
     static var ordner: URL {
         let basis = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -73,7 +78,7 @@ enum Verlauf {
 
     private static func aufraeumen() {
         let alle = eintraege()
-        guard alle.count > maximal else { return }
+        guard maximal > 0, alle.count > maximal else { return }
         for e in alle.dropFirst(maximal) {
             try? FileManager.default.removeItem(at: e.url)
         }
@@ -95,8 +100,10 @@ enum Verlauf {
         } else if liste.isEmpty {
             e.append(.ueberschrift("Noch keine Ausschnitte im Verlauf"))
         } else {
-            e.append(.ueberschrift("Letzte Ausschnitte"))
-            for eintrag in liste.prefix(15) {
+            e.append(.ueberschrift(liste.count > imMenue
+                                   ? "Die neuesten \(imMenue) von \(liste.count) Ausschnitten"
+                                   : "\(liste.count) Ausschnitte im Verlauf"))
+            for eintrag in liste.prefix(imMenue) {
                 let url = eintrag.url
                 e.append(.init(titel: f.string(from: eintrag.datum), bild: vorschau(url)) {
                     if let bild = lade(url) {
@@ -106,7 +113,8 @@ enum Verlauf {
             }
         }
         e.append(.trenner)
-        e.append(.init(titel: "Verlauf-Ordner öffnen", symbol: "folder") {
+        e.append(.init(titel: liste.count > imMenue ? "Alle \(liste.count) im Finder zeigen" : "Verlauf-Ordner öffnen",
+                       symbol: "folder") {
             try? FileManager.default.createDirectory(at: ordner, withIntermediateDirectories: true)
             NSWorkspace.shared.open(ordner)
         })

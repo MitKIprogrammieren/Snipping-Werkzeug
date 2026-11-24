@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.12 – 24.11.2026
+
+- Verlauf: Anzahl einstellbar (30, 100, 500 oder unbegrenzt, Standard jetzt 100 statt 30)
+- Verlauf-Menü zeigt die neuesten 40 statt 15, mit Gesamtzahl; „Alle im Finder zeigen“ für den Rest
+
 ## 0.0.11 – 24.11.2026
 
 - Neu: „Änderungen automatisch kopieren“ (wie bei Windows, standardmäßig an) – nach jedem Zeichnen, Schreiben, Schwärzen oder Zuschneiden liegt das bearbeitete Bild nach einer halben Sekunde in der Zwischenablage

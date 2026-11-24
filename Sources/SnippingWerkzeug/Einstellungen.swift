@@ -14,6 +14,7 @@ enum Schluessel {
     static let systemton = "systemton"
     static let mikrofon = "mikrofon"
     static let verlauf = "verlauf"
+    static let verlaufAnzahl = "verlaufAnzahl"
 }
 
 enum Einstellungen {
@@ -37,6 +38,7 @@ enum Einstellungen {
             Schluessel.systemton: false,
             Schluessel.mikrofon: false,
             Schluessel.verlauf: true,
+            Schluessel.verlaufAnzahl: 100,
         ])
     }
 
@@ -70,6 +72,7 @@ struct EinstellungenAnsicht: View {
     @AppStorage(Schluessel.systemton) private var systemton = false
     @AppStorage(Schluessel.mikrofon) private var mikrofon = false
     @AppStorage(Schluessel.verlauf) private var verlauf = true
+    @AppStorage(Schluessel.verlaufAnzahl) private var verlaufAnzahl = 100
 
     var body: some View {
         Form {
@@ -92,7 +95,13 @@ struct EinstellungenAnsicht: View {
                 Toggle("Änderungen automatisch kopieren", isOn: $autoKopierenAenderungen)
                     .help("Nach jedem Zeichnen, Schwärzen oder Zuschneiden liegt das bearbeitete Bild in der Zwischenablage")
                 Toggle("Automatisch speichern", isOn: $autoSpeichern)
-                Toggle("Verlauf der letzten \(Verlauf.maximal) Ausschnitte behalten", isOn: $verlauf)
+                Toggle("Verlauf behalten", isOn: $verlauf)
+                Picker("Im Verlauf aufheben", selection: $verlaufAnzahl) {
+                    ForEach(Verlauf.optionen, id: \.self) { n in
+                        Text(Verlauf.name(n)).tag(n)
+                    }
+                }
+                .disabled(!verlauf)
                 LabeledContent("Speicherort") {
                     HStack {
                         Text((ordner as NSString).abbreviatingWithTildeInPath)

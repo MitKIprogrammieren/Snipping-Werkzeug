@@ -460,8 +460,8 @@ final class EditorModell: ObservableObject {
     // MARK: Ausgabe
 
     /// Bild mit allen Zeichnungen zusammengeführt.
-    func gerendert() -> CGImage {
-        beendeTextBearbeitung()
+    func gerendert(textBeenden: Bool = true) -> CGImage {
+        if textBeenden { beendeTextBearbeitung() }
         guard !elemente.isEmpty else { return bild }
         let w = bild.width, h = bild.height
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,

@@ -7,6 +7,7 @@ enum Schluessel {
     static let modus = "modus"
     static let verzoegerung = "verzoegerung"
     static let autoKopieren = "autoKopieren"
+    static let autoKopierenAenderungen = "autoKopierenAenderungen"
     static let autoSpeichern = "autoSpeichern"
     static let ordner = "speicherOrdner"
     static let mauszeiger = "mauszeiger"
@@ -29,6 +30,7 @@ enum Einstellungen {
             Schluessel.modus: Modus.rechteck.rawValue,
             Schluessel.verzoegerung: 0,
             Schluessel.autoKopieren: true,
+            Schluessel.autoKopierenAenderungen: true,
             Schluessel.autoSpeichern: true,
             Schluessel.ordner: standardOrdner,
             Schluessel.mauszeiger: true,
@@ -44,6 +46,7 @@ enum Einstellungen {
     static var modus: Modus { Modus(rawValue: d.string(forKey: Schluessel.modus) ?? "") ?? .rechteck }
     static var verzoegerung: Int { d.integer(forKey: Schluessel.verzoegerung) }
     static var autoKopieren: Bool { d.bool(forKey: Schluessel.autoKopieren) }
+    static var autoKopierenAenderungen: Bool { d.bool(forKey: Schluessel.autoKopierenAenderungen) }
     static var autoSpeichern: Bool { d.bool(forKey: Schluessel.autoSpeichern) }
     static var mauszeiger: Bool { d.bool(forKey: Schluessel.mauszeiger) }
     static var systemton: Bool { d.bool(forKey: Schluessel.systemton) }
@@ -60,6 +63,7 @@ enum Einstellungen {
 struct EinstellungenAnsicht: View {
     @AppStorage(Schluessel.darstellung) private var darstellung: Darstellung = .windows
     @AppStorage(Schluessel.autoKopieren) private var autoKopieren = true
+    @AppStorage(Schluessel.autoKopierenAenderungen) private var autoKopierenAenderungen = true
     @AppStorage(Schluessel.autoSpeichern) private var autoSpeichern = true
     @AppStorage(Schluessel.ordner) private var ordner = Einstellungen.standardOrdner
     @AppStorage(Schluessel.mauszeiger) private var mauszeiger = true
@@ -84,7 +88,9 @@ struct EinstellungenAnsicht: View {
             }
 
             Section("Ausschnitte") {
-                Toggle("Automatisch in die Zwischenablage kopieren", isOn: $autoKopieren)
+                Toggle("Ausschnitt automatisch in die Zwischenablage kopieren", isOn: $autoKopieren)
+                Toggle("Änderungen automatisch kopieren", isOn: $autoKopierenAenderungen)
+                    .help("Nach jedem Zeichnen, Schwärzen oder Zuschneiden liegt das bearbeitete Bild in der Zwischenablage")
                 Toggle("Automatisch speichern", isOn: $autoSpeichern)
                 Toggle("Verlauf der letzten \(Verlauf.maximal) Ausschnitte behalten", isOn: $verlauf)
                 LabeledContent("Speicherort") {

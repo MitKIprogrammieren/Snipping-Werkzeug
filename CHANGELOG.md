@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.0.11 – 24.11.2026
+
+- Neu: „Änderungen automatisch kopieren“ (wie bei Windows, standardmäßig an) – nach jedem Zeichnen, Schreiben, Schwärzen oder Zuschneiden liegt das bearbeitete Bild nach einer halben Sekunde in der Zwischenablage
+
 ## 0.0.10 – 24.11.2026
 
 - Fenster behält seine Größe: es springt nicht mehr bei jedem Ausschnitt auf die Bildgröße, das Bild passt sich ans Fenster an

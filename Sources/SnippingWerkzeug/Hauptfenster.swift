@@ -3,6 +3,7 @@ import AppKit
 import AVKit
 import UniformTypeIdentifiers
 import ImageIO
+import Combine
 
 @MainActor
 final class HauptZustand: ObservableObject {
@@ -14,6 +15,7 @@ final class HauptZustand: ObservableObject {
 
     @Published var inhalt: Inhalt = .leer {
         didSet {
+            beobachteAenderungen()
             player.pause()
             if let v = video {
                 player.replaceCurrentItem(with: AVPlayerItem(url: v))
@@ -26,6 +28,26 @@ final class HauptZustand: ObservableObject {
     @Published var kuerztGerade = false
     let player = AVPlayer()
     weak var playerView: AVPlayerView?
+
+    private var kopierBeobachter: AnyCancellable?
+
+    /// Wie „Änderungen automatisch kopieren“ bei Windows: nach jeder Bearbeitung
+    /// (kurz verzögert) das bearbeitete Bild in die Zwischenablage legen.
+    private func beobachteAenderungen() {
+        kopierBeobachter = nil
+        guard let m = editor else { return }
+        kopierBeobachter = m.$elemente.map { _ in () }
+            .merge(with: m.$bild.map { _ in () })
+            .dropFirst(2)                       // die beiden Startwerte überspringen
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
+            .sink { [weak self, weak m] _ in
+                MainActor.assumeIsolated {
+                    guard Einstellungen.autoKopierenAenderungen, let m, let self else { return }
+                    Ablage.kopiere(m.gerendert(textBeenden: false))
+                    self.meldung = "Änderungen in die Zwischenablage kopiert"
+                }
+            }
+    }
 
     var editor: EditorModell? {
         if case .bild(let m) = inhalt { return m }

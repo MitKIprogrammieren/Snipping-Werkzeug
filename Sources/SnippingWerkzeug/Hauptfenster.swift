@@ -168,10 +168,7 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
 
     /// Öffnet das Fenster mit dem zuletzt aufgenommenen Ausschnitt (z. B. nach Klick auf den Hinweis).
     func zeigeAktuellesBild() {
-        let w = fenster ?? erstelle()
-        if let m = zustand.editor {
-            passeGroesseAn(w, an: m.groesse)
-        }
+        // Fenstergröße bleibt, wie du sie eingestellt hast – das Bild passt sich ans Fenster an
         zeigen()
     }
 
@@ -182,7 +179,7 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
     }
 
     private func erstelle() -> NSWindow {
-        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 620),
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                          backing: .buffered, defer: false)
         w.title = "Snipping Werkzeug"
@@ -227,11 +224,11 @@ final class Hauptfenster: NSObject, NSWindowDelegate {
             // Leere Symbolleiste → hohe Titelleiste, Ampelknöpfe mittig neben Logo und Titel
             w.toolbar = NSToolbar(identifier: "SnippingWerkzeugLeiste")
             w.toolbarStyle = .unified
-            w.minSize = NSSize(width: 900, height: 500)
+            w.minSize = NSSize(width: 720, height: 460)
         } else {
             w.toolbar = nil
             w.toolbarStyle = .automatic
-            w.minSize = NSSize(width: 1240, height: 500)
+            w.minSize = NSSize(width: 760, height: 460)
         }
         // Windows: Mac-Ampel ausblenden, eigene Knöpfe rechts
         for art in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
@@ -285,11 +282,13 @@ struct HauptAnsicht: View {
                         AppLogo(groesse: 24).allowsHitTesting(false)
                         Text("Snipping Werkzeug")
                             .font(.system(size: 13, weight: .semibold))
+                            .lineLimit(1)
+                            .layoutPriority(-1)
                             .allowsHitTesting(false)
                         Trenner()
-                        AufnahmeKnoepfe()
+                        AufnahmeKnoepfe().fixedSize()
                         Spacer(minLength: 8)
-                        AusgabeKnoepfe(zustand: zustand)
+                        AusgabeKnoepfe(zustand: zustand).fixedSize()
                     }
                     .padding(.trailing, 12)
                 }
@@ -298,13 +297,9 @@ struct HauptAnsicht: View {
 
                 if let m = zustand.editor {
                     Divider()
-                    HStack {
-                        Spacer()
-                        BearbeitungsWerkzeuge(m: m)
-                        Spacer()
-                    }
-                    .frame(height: 38)
-                    .background(.bar)
+                    MittelLeiste { BearbeitungsWerkzeuge(m: m) }
+                        .frame(height: 38)
+                        .background(.bar)
                 }
                 Divider()
             }

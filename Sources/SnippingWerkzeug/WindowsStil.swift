@@ -83,20 +83,27 @@ struct WindowsLeiste: View {
     var body: some View {
         let stil = Stil(darstellung: darstellung)
         HStack(spacing: 4) {
-            NeuKnopf()
-            WinArtUmschalter().padding(.leading, 4)
-            WinModusMenue()
-            WinVerzoegerungsMenue(mitText: zustand.editor == nil)
-
-            Spacer(minLength: 12)
-            if let m = zustand.editor {
-                BearbeitungsWerkzeuge(m: m, mitRueckgaengig: false)
+            // Links: immer sichtbar
+            HStack(spacing: 4) {
+                NeuKnopf()
+                WinArtUmschalter().padding(.leading, 4)
+                WinModusMenue()
+                WinVerzoegerungsMenue(mitText: zustand.editor == nil && zustand.video == nil)
             }
-            if zustand.video != nil {
-                LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
-            }
-            Spacer(minLength: 12)
+            .fixedSize()
 
+            // Mitte: Werkzeuge – wird bei schmalem Fenster seitlich scrollbar statt abgeschnitten
+            MittelLeiste {
+                if let m = zustand.editor {
+                    BearbeitungsWerkzeuge(m: m, mitRueckgaengig: false)
+                }
+                if zustand.video != nil {
+                    LeistenKnopf(symbol: "scissors", hilfe: "Video kürzen") { zustand.videoKuerzen() }
+                }
+            }
+
+            // Rechts: immer sichtbar
+            HStack(spacing: 4) {
             if let m = zustand.editor {
                 RueckgaengigKnoepfe(m: m)
             }
@@ -110,6 +117,8 @@ struct WindowsLeiste: View {
             }
             LeistenKnopf(symbol: "clock.arrow.circlepath", hilfe: "Verlauf") { Verlauf.zeigeMenue() }
             MehrMenue(zustand: zustand)
+            }
+            .fixedSize()
         }
         .padding(.horizontal, 8)
         .frame(height: 48)
@@ -299,5 +308,21 @@ struct HinweisAnsicht: View {
         .overlay(RoundedRectangle(cornerRadius: stil.istWindows ? 8 : 12).strokeBorder(stil.linie, lineWidth: 1))
         .contentShape(Rectangle())
         .onTapGesture(perform: oeffnen)
+    }
+}
+
+/// Mittlerer Teil der Leiste: mittig, wenn Platz ist – sonst seitlich scrollbar (Mausrad/Trackpad),
+/// damit links „Neu“ und rechts „Kopieren“ nie abgeschnitten werden.
+struct MittelLeiste<Inhalt: View>: View {
+    @ViewBuilder let inhalt: () -> Inhalt
+
+    var body: some View {
+        GeometryReader { geo in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 2) { inhalt() }
+                    .frame(minWidth: geo.size.width, minHeight: geo.size.height)
+            }
+        }
+        .frame(minWidth: 40, maxWidth: .infinity)
     }
 }

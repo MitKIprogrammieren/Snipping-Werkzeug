@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.10 – 24.11.2026
+
+- Fenster behält seine Größe: es springt nicht mehr bei jedem Ausschnitt auf die Bildgröße, das Bild passt sich ans Fenster an
+- Leiste wird nicht mehr abgeschnitten: „Neu“, Modus und Verzögerung links sowie Speichern, Kopieren, Teilen, Verlauf und „…“ rechts sind immer sichtbar; die Werkzeuge in der Mitte werden bei schmalem Fenster seitlich scrollbar (Mausrad oder Trackpad)
+- Fenster lässt sich schmaler ziehen (ab 760 px statt 1240 px)
+
 ## 0.0.9 – 15.11.2026
 
 Nummerierte Marker:

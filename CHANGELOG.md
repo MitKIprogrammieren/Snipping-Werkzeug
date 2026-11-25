@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 – 25.11.2026
+
+- Berechtigung „Bildschirmaufnahme“: geprüft wird jetzt über den echten Zugriff statt über die Vorab-Abfrage von macOS – die Meldung kam sonst immer wieder, obwohl die Freigabe schon an war
+- Hinweisfenster mit Knopf „App neu starten“ und Anleitung, falls macOS die App nach einem Update nicht wiedererkennt
+- Bau-Skript signiert mit einem eigenen, gleichbleibenden Zertifikat (wird einmalig im Schlüsselbund angelegt) – die Freigabe bleibt dadurch über Updates erhalten; ad-hoc nur noch als Rückfall
+
 ## 0.1.0 – 24.11.2026
 
 - **Scrollaufnahme:** neuer Modus „Scrollen“ in der Aufnahmeleiste – Bereich wählen, langsam scrollen, „Fertig“; die App setzt alles zu einem langen Bild zusammen (bis 40.000 px)

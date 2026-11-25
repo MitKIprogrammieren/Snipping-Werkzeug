@@ -153,3 +153,52 @@ final class Videoaufnahme: NSObject, SCStreamDelegate, SCRecordingOutputDelegate
     func recordingOutput(_ recordingOutput: SCRecordingOutput, didFailWithError error: Error) { melde() }
     func stream(_ stream: SCStream, didStopWithError error: Error) { melde() }
 }
+
+/// Berechtigung „Bildschirm- und Systemaudioaufnahme“.
+/// Geprüft wird über den echten Zugriff (ScreenCaptureKit) – die Vorab-Abfrage von macOS meldet
+/// nach dem Einschalten oft noch „nein“, bis die App neu gestartet ist.
+enum Berechtigung {
+    static func istFehlend(_ fehler: Error) -> Bool {
+        if let s = fehler as? SCStreamError, s.code == .userDeclined { return true }
+        let ns = fehler as NSError
+        if ns.domain == SCStreamErrorDomain && ns.code == SCStreamError.Code.userDeclined.rawValue { return true }
+        return !CGPreflightScreenCaptureAccess()
+    }
+
+    @MainActor
+    static func zeigeHinweis() {
+        let a = NSAlert()
+        a.messageText = "Bildschirmaufnahme erlauben"
+        a.informativeText = """
+        Öffne Systemeinstellungen → Datenschutz & Sicherheit → Bildschirm- und Systemaudioaufnahme \
+        und schalte „Snipping Werkzeug“ ein. Danach die App neu starten.
+
+        Ist der Schalter schon an und es klappt trotzdem nicht: Eintrag markieren, mit „–“ entfernen, \
+        die App neu starten und beim nächsten Ausschnitt erneut erlauben. (Nach einem Update erkennt macOS \
+        die App sonst manchmal nicht wieder.)
+        """
+        a.addButton(withTitle: "Systemeinstellungen öffnen")
+        a.addButton(withTitle: "App neu starten")
+        a.addButton(withTitle: "Abbrechen")
+        switch a.runModal() {
+        case .alertFirstButtonReturn:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                NSWorkspace.shared.open(url)
+            }
+        case .alertSecondButtonReturn:
+            neuStarten()
+        default:
+            break
+        }
+    }
+
+    @MainActor
+    static func neuStarten() {
+        let pfad = Bundle.main.bundlePath
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/sh")
+        p.arguments = ["-c", "sleep 1; open \"\(pfad)\""]
+        try? p.run()
+        NSApp.terminate(nil)
+    }
+}

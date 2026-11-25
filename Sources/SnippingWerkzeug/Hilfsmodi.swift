@@ -176,7 +176,6 @@ final class HilfsSteuerung {
 
     func starte(_ art: HilfsArt) {
         guard eintraege.isEmpty else { return }
-        guard CGPreflightScreenCaptureAccess() || CGRequestScreenCaptureAccess() else { return }
         Task {
             do {
                 let inhalt = try await Bildschirm.inhalt()
@@ -202,7 +201,7 @@ final class HilfsSteuerung {
                 }
             } catch {
                 beende()
-                Meldung.fehler(error)
+                if Berechtigung.istFehlend(error) { Berechtigung.zeigeHinweis() } else { Meldung.fehler(error) }
             }
         }
     }

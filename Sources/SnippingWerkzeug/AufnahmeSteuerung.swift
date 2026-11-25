@@ -84,10 +84,6 @@ final class AufnahmeSteuerung {
     // MARK: Ablauf
 
     private func ablauf(modus: Modus) async {
-        guard pruefeBerechtigung() else {
-            abgebrochen()
-            return
-        }
         let art = artFuerDiesenLauf ?? Einstellungen.art
         artFuerDiesenLauf = nil
         let v = Einstellungen.verzoegerung
@@ -127,24 +123,12 @@ final class AufnahmeSteuerung {
             zeigeAuswahl(modus: m, art: art, inhalt: inhalt, bilder: bilder)
         } catch {
             abgebrochen()
-            Meldung.fehler(error)
+            if Berechtigung.istFehlend(error) {
+                Berechtigung.zeigeHinweis()
+            } else {
+                Meldung.fehler(error)
+            }
         }
-    }
-
-    private func pruefeBerechtigung() -> Bool {
-        if CGPreflightScreenCaptureAccess() { return true }
-        if CGRequestScreenCaptureAccess() { return true }
-        let a = NSAlert()
-        a.messageText = "Bildschirmaufnahme erlauben"
-        a.informativeText = "Das Snipping Werkzeug braucht die Berechtigung „Bildschirm- und Systemaudioaufnahme“. "
-            + "Schalte sie in den Systemeinstellungen unter „Datenschutz & Sicherheit“ ein und starte die App danach neu."
-        a.addButton(withTitle: "Systemeinstellungen öffnen")
-        a.addButton(withTitle: "Abbrechen")
-        if a.runModal() == .alertFirstButtonReturn,
-           let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-            NSWorkspace.shared.open(url)
-        }
-        return false
     }
 
     private func countdown(_ sekunden: Int) async {
